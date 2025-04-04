@@ -1,0 +1,142 @@
+/* 篩選欄位的樣式 */
+.selectStyle{
+    height: 25px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background-color: white;
+    font-family: Arial, sans-serif;
+    margin-bottom: 2px;
+  }
+  
+  /* 容器：使用 Flexbox 讓內容並排 */
+  .SelectContainer {
+    display: flex;
+    flex-wrap: wrap; /* 確保小螢幕時可以換行 */
+    align-items: center;
+    justify-content: flex-start; /* 靠左對齊 */
+    gap: 10px; /* 增加間距，避免過度擁擠 */
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  
+  /* 左側 (選擇加密貨幣) */
+  .SelectleftItem {
+    flex: 1; /* 讓它能夠自適應 */
+    max-width: 60%; /* 限制最大寬度，確保版面不錯亂 */
+    font-family: Arial, sans-serif;
+  }
+  
+  /* 右側 (時間範圍) */
+  .SelectrightItem {
+    flex: 1;
+    max-width: 40%; /* 避免影響其他內容 */
+    font-family: Arial, sans-serif;
+    text-align: left; /* 確保文字靠左 */
+  }
+  
+  
+  /* 股價趨勢圖數值 */
+  .titleContainer {
+    display: flex;
+    flex-wrap: wrap; /* 確保小螢幕時可以換行 */
+    align-items: center;
+    justify-content: flex-start; /* 靠左對齊 */
+    gap: 10px; /* 增加間距，避免過度擁擠 */
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  
+  .leftItem {
+    flex: 1; /* 讓它能夠自適應 */
+    max-width: 55%; /* 避免影響其他內容 */
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: xx-large;
+    text-align: right; /* 確保文字靠右 */
+    margin-bottom: 2px;
+  }
+  
+  .rightItem {
+    flex: 1; /* 讓它能夠自適應 */
+    max-width: 30%; /* 避免影響其他內容 */
+    font-family: Arial, sans-serif;
+    margin-right: 10px;
+    font-weight: bold;
+    font-size: xx-large;
+    margin-bottom: 4px;
+    color: #FFFFFF; 
+    padding: 4px 8px; 
+    border-radius: 6px; 
+    display: inline-block; 
+    text-align: center;
+  }
+  
+  /* 買進按鈕 - 綠色 */
+  .BuyButton {
+    background-color: #16A34A; /* 綠色 */
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  .BuyButton:hover {
+    background-color: #15803D; /* 深綠色 */
+  }
+  
+  .BuyButton:active {
+    transform: scale(0.95);
+  }
+  
+  /* 賣出按鈕 - 紅色 */
+  .SellOffButton {
+    background-color: #DC2626; /* 紅色 */
+    color: white;
+    padding: 10px 20px;
+    font-size: 16px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  .SellOffButton:hover {
+    background-color: #B91C1C; /* 深紅色 */
+  }
+  
+  .SellOffButton:active {
+    transform: scale(0.95);
+  }
+  
+  /* 買進買出Button並排 */
+  .BTitleContainer {
+    display: flex;
+    flex-wrap: wrap; /* 確保小螢幕時可以換行 */
+    align-items: center;
+    justify-content: flex-start; /* 靠左對齊 */
+    gap: 10px; /* 增加間距，避免過度擁擠 */
+    width: 100%;
+    margin-bottom: 6px;
+  }
+  
+  .BLeftItem {
+    flex: 1; /* 讓它能夠自適應 */
+    max-width: 13%; /* 避免影響其他內容 */
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    font-size: xx-large;
+    margin-bottom: 2px;
+  }
+  
+  .BRightItem {
+    flex: 1; /* 讓它能夠自適應 */
+    max-width: 20%; /* 避免影響其他內容 */
+    font-family: Arial, sans-serif;
+    margin-right: 10px;
+    font-weight: bold;
+    font-size: xx-large;
+    margin-bottom: 2px;
+  }
