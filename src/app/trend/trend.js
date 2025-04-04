@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
-// import Chart from "react-apexcharts";
-import dynamic from "next/dynamic"; // 動態載入 Chart，避免 SSR 問題
-import style from '../css/trend.module.css';
+import dynamic from "next/dynamic"; // Dynamic import for Chart to avoid SSR issues
 
+// Import the Chart component dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-export default function MainTrend() {
+export default function MobileCryptoInterface() {
+  // Chart state
   const [priceData, setPriceData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -13,13 +13,35 @@ export default function MainTrend() {
   const [timeframe, setTimeframe] = useState("1");
   const [latestPrice, setLatestPrice] = useState(null);
   const [priceChange, setPriceChange] = useState(null);
-  const [hoveredData, setHoveredData] = useState(null); // 初始化 hover 狀態
+  const [hoveredData, setHoveredData] = useState(null);
+  
+  // Swap state
+  const [activeTab, setActiveTab] = useState("swap");
+  const [payAmount, setPayAmount] = useState("1");
+  const [receiveAmount, setReceiveAmount] = useState("");
+  const [payCurrency, setPayCurrency] = useState("ETH");
+  const [receiveCurrency, setReceiveCurrency] = useState("USDC");
+  const [expiryDays, setExpiryDays] = useState("7 Days");
+  const [walletConnected, setWalletConnected] = useState(false);
+  
+  // Conversion state
+  const [cryptoPrices, setCryptoPrices] = useState({});
+  const [payValueUSD, setPayValueUSD] = useState(0);
+  const [receiveValueUSD, setReceiveValueUSD] = useState(0);
+  const [conversionLoading, setConversionLoading] = useState(false);
 
-  // 浮動程度的樣式
-  const UDStyle = {
-    backgroundColor: priceChange >= 0 ? "#16A34A" : "#DC2626", // bg-green-600 / bg-red-600
+  // Cryptocurrency ID mapping (CoinGecko IDs)
+  const cryptoIdMap = {
+    "BTC": "bitcoin",
+    "ETH": "ethereum",
+    "USDC": "usd-coin",
+    "BNB": "binancecoin",
+    "SOL": "solana",
+    "DOGE": "dogecoin",
+    "ADA": "cardano"
   };
 
+  // Fetch price data for the selected cryptocurrency chart
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -31,7 +53,6 @@ export default function MainTrend() {
         );
 
         if (!response.ok) {
-          // 獲取數據失敗
           throw new Error("Failed to retrieve data.");
         }
 
@@ -41,10 +62,10 @@ export default function MainTrend() {
           return {
             x: new Date(item[0]),
             y: [
-              arr[index - 3][1], // 開盤價
-              Math.max(arr[index - 2][1], arr[index - 1][1], item[1]), // 最高價
-              Math.min(arr[index - 2][1], arr[index - 1][1], item[1]), // 最低價
-              item[1], // 收盤價
+              arr[index - 3][1], // Open
+              Math.max(arr[index - 2][1], arr[index - 1][1], item[1]), // High
+              Math.min(arr[index - 2][1], arr[index - 1][1], item[1]), // Low
+              item[1], // Close
             ],
           };
         }).filter(Boolean);
@@ -52,9 +73,9 @@ export default function MainTrend() {
         setPriceData([{ data: formattedData }]);
 
         if (formattedData.length > 0) {
-          const latest = formattedData[formattedData.length - 1].y[3]; // 收盤價
+          const latest = formattedData[formattedData.length - 1].y[3]; // Closing price
           setLatestPrice(latest);
-          const first = formattedData[0].y[3]; // 開盤價
+          const first = formattedData[0].y[3]; // Opening price
           setPriceChange(((latest - first) / first) * 100);
         }
 
@@ -70,11 +91,76 @@ export default function MainTrend() {
     return () => clearInterval(intervalId);
   }, [selectedCrypto, timeframe]);
 
+  // Fetch prices for all currencies in our swap dropdown
+  useEffect(() => {
+    const fetchCryptoPrices = async () => {
+      try {
+        setConversionLoading(true);
+        const cryptoIds = Object.values(cryptoIdMap).join(',');
+        const response = await fetch(
+          `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoIds}&vs_currencies=usd`
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to retrieve price data.");
+        }
+
+        const data = await response.json();
+        setCryptoPrices(data);
+        setConversionLoading(false);
+      } catch (err) {
+        console.error("Error fetching crypto prices:", err);
+        setConversionLoading(false);
+      }
+    };
+
+    fetchCryptoPrices();
+    const intervalId = setInterval(fetchCryptoPrices, 60000);
+    return () => clearInterval(intervalId);
+  }, []);
+
+  // Calculate conversion when pay amount, pay currency, or receive currency changes
+  useEffect(() => {
+    if (Object.keys(cryptoPrices).length > 0 && !isNaN(parseFloat(payAmount))) {
+      const payId = cryptoIdMap[payCurrency];
+      const receiveId = cryptoIdMap[receiveCurrency];
+      
+      if (cryptoPrices[payId] && cryptoPrices[receiveId]) {
+        const payUsdValue = parseFloat(payAmount) * cryptoPrices[payId].usd;
+        const newReceiveAmount = (payUsdValue / cryptoPrices[receiveId].usd).toFixed(8);
+        
+        setPayValueUSD(payUsdValue);
+        setReceiveValueUSD(payUsdValue); // Same USD value (minus fees in a real app)
+        setReceiveAmount(newReceiveAmount);
+      }
+    }
+  }, [payAmount, payCurrency, receiveCurrency, cryptoPrices]);
+
+  // Update pay amount when receive amount is changed directly
+  const handleReceiveAmountChange = (e) => {
+    const newReceiveAmount = e.target.value;
+    setReceiveAmount(newReceiveAmount);
+    
+    if (Object.keys(cryptoPrices).length > 0 && !isNaN(parseFloat(newReceiveAmount))) {
+      const payId = cryptoIdMap[payCurrency];
+      const receiveId = cryptoIdMap[receiveCurrency];
+      
+      if (cryptoPrices[payId] && cryptoPrices[receiveId]) {
+        const receiveUsdValue = parseFloat(newReceiveAmount) * cryptoPrices[receiveId].usd;
+        const newPayAmount = (receiveUsdValue / cryptoPrices[payId].usd).toFixed(8);
+        
+        setPayValueUSD(receiveUsdValue);
+        setReceiveValueUSD(receiveUsdValue);
+        setPayAmount(newPayAmount);
+      }
+    }
+  };
+
+  // Chart options
   const options = {
     chart: {
       type: "candlestick",
       height: 350,
-      // 顯示圖中之點選內容
       events: {
         dataPointSelection: function (event, chartContext, config) {
           const { dataPointIndex } = config;
@@ -82,9 +168,9 @@ export default function MainTrend() {
             const selectedPoint = priceData[0].data[dataPointIndex];
             const price = selectedPoint.y;
             setHoveredData({
-              date: new Date(selectedPoint.x).toLocaleString("zh-TW", { 
+              date: new Date(selectedPoint.x).toLocaleString("en-US", { 
                 year: "numeric", month: "2-digit", day: "2-digit",
-                hour: "2-digit", minute: "2-digit", second: "2-digit" // 加入秒級顯示
+                hour: "2-digit", minute: "2-digit"
               }),
               open: price[0].toFixed(2),
               high: price[1].toFixed(2),
@@ -96,7 +182,6 @@ export default function MainTrend() {
       },
     },
     title: {
-      // K線圖示例
       text: "Candlestick Chart",
       align: "left",
     },
@@ -105,32 +190,29 @@ export default function MainTrend() {
     },
     yaxis: {
       labels: {
-        formatter: (value) => value.toFixed(2), // 限制小數點後兩位
+        formatter: (value) => value.toFixed(2),
       },
     },
-    tooltip: { enabled: false }, // 取消內建 tooltip
+    tooltip: { enabled: false },
   };
 
-  const formatPrice = (price) => {
-    return new Intl.NumberFormat('zh-TW', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(price);
+  // Switch currencies
+  const handleSwitchCurrencies = () => {
+    const tempCurrency = payCurrency;
+    setPayCurrency(receiveCurrency);
+    setReceiveCurrency(tempCurrency);
   };
 
+  // Render the component
   return (
-    <div className="p-4 max-w-2xl mx-auto ml-100" style={{ marginLeft: "10px" }}>
-      <div className={`${style.SelectContainer}`}>
-      <div className={`${style.SelectleftItem}`}>
-        {/* className="mb-4" */}
-        {/* 選擇加密貨幣 */}
-        <label className="block text-sm font-medium text-gray-700 mb-1"><b>Cryptocurrency</b> </label>
+    <div style={{ fontFamily: 'Arial, sans-serif', maxWidth: '100%', margin: '0', padding: '0' }}>
+      {/* Cryptocurrency and Timeframe Selection */}
+      <div style={{ padding: '10px', display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
         <select
-          className={`${style.selectStyle}`}
+          style={{ padding: '5px', fontSize: '14px', width: '48%' }}
+          value={selectedCrypto}
+          onChange={(e) => setSelectedCrypto(e.target.value)}
         >
-          {/* className="w-full p-2 border border-gray-300 rounded-full bg-white" */}
           <option value="bitcoin">Bitcoin (BTC)</option>
           <option value="ethereum">Ethereum (ETH)</option>
           <option value="binancecoin">Binance Coin (BNB)</option>
@@ -138,17 +220,12 @@ export default function MainTrend() {
           <option value="dogecoin">Dogecoin (DOGE)</option>
           <option value="cardano">Cardano (ADA)</option>
         </select>
-      </div>
 
-      <div className={`${style.SelectrightItem}`}>
-        {/* 時間範圍 */}
-        <label className="block text-sm font-medium text-gray-700 mb-1"><b>Date Range</b> </label>
         <select
-          className={`${style.selectStyle}`}
+          style={{ padding: '5px', fontSize: '14px', width: '48%' }}
           value={timeframe}
           onChange={(e) => setTimeframe(e.target.value)}
         >
-          {/* className="w-full p-2 border border-gray-300 rounded-md bg-white" */}
           <option value="1">1 day</option>
           <option value="7">7 days</option>
           <option value="30">30 days</option>
@@ -157,74 +234,237 @@ export default function MainTrend() {
           <option value="max">All</option>
         </select>
       </div>
-      </div>
+
+      {/* Price Display */}
       {latestPrice && (
-        <div className="flex flex-wrap items-center gap-4 mb-2">
-          <div className={`${style.titleContainer}`}>
-          <div className={`${style.leftItem}`}>
-            {/* className="text-xl font-bold" */}
-            {formatPrice(latestPrice)}
-          </div>
-          {priceChange !== null && (
-            <div className={`${style.rightItem}`} style={UDStyle}>
-               {/* className={`text-sm font-medium ${priceChange >= 0 ? 'text-green-600' : 'text-red-600'}`} */}
-              {priceChange >= 0 ? '+' : '-'} {Math.abs(priceChange).toFixed(2)}%
-            </div>
-          )}
-          </div>
-          <div className="text-sm text-gray-500" style={{color:'#555', fontweight: 'bold'}}>
-            Past {timeframe === 'max' ? 'Maximum Time' : timeframe === '365' ? '1 year' : `${timeframe} day`}
+        <div style={{ padding: '0 10px', marginBottom: '5px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <span style={{ fontSize: '20px', fontWeight: 'bold' }}>
+              ${latestPrice.toFixed(2)}
+            </span>
+            {priceChange !== null && (
+              <span 
+                style={{
+                  padding: '3px 6px',
+                  backgroundColor: priceChange >= 0 ? "#16A34A" : "#DC2626",
+                  color: 'white',
+                  borderRadius: '4px',
+                  fontSize: '14px'
+                }}
+              >
+                {priceChange >= 0 ? '+' : ''}{priceChange.toFixed(2)}%
+              </span>
+            )}
           </div>
         </div>
       )}
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          <p>{error}</p>
-        </div>
-      )}
-
+      {/* Chart */}
       {loading ? (
-        <div className="flex justify-center items-center h-64">
-          <p className="text-gray-500">Loading...</p>
+        <div style={{ 
+          height: '200px', 
+          display: 'flex', 
+          justifyContent: 'center', 
+          alignItems: 'center',
+          backgroundColor: '#f5f5f5'
+        }}>
+          <p>Loading...</p>
         </div>
       ) : (
-        <Chart options={options} series={priceData} type="candlestick" height={400} style={{backgroundColor:"#f5f5f5", padding: "10px", borderRadius: "5px", marginRight:"10px"}} />
+        <div style={{ marginBottom: '10px' }}>
+          <Chart 
+            options={options} 
+            series={priceData} 
+            type="candlestick" 
+            height={250} 
+          />
+        </div>
       )}
 
-      {/* <div className="mt-4 text-xs text-gray-500"> */}
-      <div style={{ background: "#f5f5f5", padding: "10px", borderRadius: "5px", marginRight:"10px", marginLeft:"0px" }}>
-        <h3>📊 Data</h3>
-        {hoveredData ? (
-          <div className="flex justify-center items-center h-64">
-            <p>📅&ensp;Date: {hoveredData.date}</p>
-            <p>&ensp;&ensp;&ensp; Opening Price: ${hoveredData.open}</p>
-            <p>&ensp;&ensp;&ensp; High Price: ${hoveredData.high}</p>
-            <p>&ensp;&ensp;&ensp; Low Price: ${hoveredData.low}</p>
-            <p>&ensp;&ensp;&ensp; Closing Price: ${hoveredData.close}</p>
+      {/* Swap Interface */}
+      <div style={{ border: '1px solid #e0e0e0', padding: '10px' }}>
+        {/* Tabs */}
+        <div style={{ display: 'flex', marginBottom: '10px' }}>
+          <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
+            Swap Currencies
           </div>
-        ) : (
-          <p>Please move the mouse over the chart to view data.</p>
-          // 請將滑鼠移動到圖表上查看數據
-        )}
-      </div>
-
-      <div className="mt-4 text-xs text-gray-500">
-        <p>Data Source: CoinGecko API • Automatically updates every minute.</p>
-        {/* 資料來源: CoinGecko API • 自動每分鐘更新 */}
-      </div>
-
-      <div className={`${style.BTitleContainer}`} >
-        <div className={`${style.BLeftItem}`} >
-          {/* 買進 */}
-          <button className={`${style.BuyButton}`}>Buy</button>
         </div>
-        <div className={`${style.BRightItem}`} >
-          {/* 賣出 */}
-          <button className={`${style.SellOffButton}`}>Sell Off</button>
+
+        {/* Pay Section */}
+        <div style={{ marginBottom: '15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+            <span style={{ fontSize: '16px' }}>You pay</span>
+            <span style={{ fontSize: '16px' }}>Balance: 0 MAX</span>
+          </div>
+          <input
+            type="text"
+            value={payAmount}
+            onChange={(e) => setPayAmount(e.target.value)}
+            style={{ 
+              width: '100%', 
+              padding: '8px', 
+              fontSize: '16px', 
+              marginBottom: '5px',
+              boxSizing: 'border-box',
+              border: '1px solid #ccc'
+            }}
+          />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <select 
+              value={payCurrency}
+              onChange={(e) => setPayCurrency(e.target.value)}
+              style={{ 
+                padding: '5px', 
+                fontSize: '16px',
+                border: '1px solid #ccc',
+                width: '30%'
+              }}
+            >
+              <option value="BTC">BTC</option>
+              <option value="ETH">ETH</option>
+              <option value="USDC">USDC</option>
+              <option value="BNB">BNB</option>
+              <option value="SOL">SOL</option>
+            </select>
+            <button 
+              onClick={handleSwitchCurrencies}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '24px',
+                cursor: 'pointer'
+              }}
+            >
+              ⇅
+            </button>
+          </div>
+          <div style={{ marginTop: '5px', fontSize: '14px', color: '#666' }}>
+            {!conversionLoading && payValueUSD ? `~$${payValueUSD.toFixed(2)} USD` : "Loading..."}
+          </div>
+        </div>
+
+        {/* Receive Section */}
+        <div style={{ marginBottom: '15px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+            <span style={{ fontSize: '16px' }}>You receive</span>
+            <span style={{ fontSize: '16px' }}>Balance: 0</span>
+          </div>
+          <input
+            type="text"
+            value={receiveAmount}
+            onChange={handleReceiveAmountChange}
+            style={{ 
+              width: '100%', 
+              padding: '8px', 
+              fontSize: '16px', 
+              marginBottom: '5px',
+              boxSizing: 'border-box',
+              border: '1px solid #ccc'
+            }}
+          />
+          <select 
+            value={receiveCurrency}
+            onChange={(e) => setReceiveCurrency(e.target.value)}
+            style={{ 
+              padding: '5px', 
+              fontSize: '16px',
+              border: '1px solid #ccc',
+              width: '30%'
+            }}
+          >
+            <option value="USDC">USDC</option>
+            <option value="BTC">BTC</option>
+            <option value="ETH">ETH</option>
+            <option value="BNB">BNB</option>
+            <option value="SOL">SOL</option>
+          </select>
+          <div style={{ marginTop: '5px', fontSize: '14px', color: '#666' }}>
+            {!conversionLoading && receiveValueUSD ? `~$${receiveValueUSD.toFixed(2)} USD` : "Loading..."}
+          </div>
+        </div>
+
+        {/* Conversion Rate */}
+        <div style={{ 
+          marginBottom: '15px', 
+          padding: '8px', 
+          backgroundColor: '#f5f5f5', 
+          borderRadius: '4px',
+          fontSize: '14px'
+        }}>
+          {conversionLoading ? (
+            "Loading conversion rates..."
+          ) : (
+            Object.keys(cryptoPrices).length > 0 && (
+              <>
+                <div>Exchange Rate:</div>
+                <div style={{ fontWeight: 'bold' }}>
+                  1 {payCurrency} = {cryptoPrices[cryptoIdMap[payCurrency]] && cryptoPrices[cryptoIdMap[receiveCurrency]] ? 
+                    (cryptoPrices[cryptoIdMap[payCurrency]].usd / cryptoPrices[cryptoIdMap[receiveCurrency]].usd).toFixed(6) : 
+                    "..."} {receiveCurrency}
+                </div>
+              </>
+            )
+          )}
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ marginBottom: '15px' }}>
+          <button style={{ 
+            width: '100%', 
+            padding: '10px', 
+            fontSize: '16px',
+            backgroundColor: '#3498db',
+            color: 'white',
+            border: 'none',
+            marginBottom: '10px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            borderRadius: '4px',
+            cursor: 'pointer'
+          }}>
+            SWAP!
+          </button>
+        </div>
+      </div>
+
+      {/* Bottom Navigation */}
+      <div style={{ 
+        display: 'flex', 
+        justifyContent: 'space-around', 
+        padding: '10px',
+        borderTop: '1px solid #ccc',
+        position: 'fixed',
+        bottom: '0',
+        left: '0',
+        right: '0',
+        backgroundColor: 'white'
+      }}>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          fontSize: '24px'
+        }}>
+          📰
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          fontSize: '24px'
+        }}>
+          📈
+        </div>
+        <div style={{ 
+          display: 'flex', 
+          flexDirection: 'column',
+          alignItems: 'center',
+          fontSize: '24px'
+        }}>
+          🎮
         </div>
       </div>
     </div>
   );
-};
-
+}
