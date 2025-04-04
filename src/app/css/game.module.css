@@ -1,0 +1,191 @@
+/* /* 卡片網格樣式 / */
+.cardGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+    width: 100%;
+    perspective: 1000px;
+  }
+  
+  /* / 卡片容器 / */
+  .cardContainer {
+    height: 5rem;
+    width: 100%;
+    position: relative;
+  }
+  
+  /* / 卡片基本樣式 / */
+  .card {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    transition: transform 0.5s;
+    transform-style: preserve-3d;
+  }
+  
+  /* / 卡片翻轉效果 / */
+  .card.flipped {
+    transform: rotateY(0);
+  }
+  
+  .card:not(.flipped) {
+    transform: rotateY(180deg);
+  }
+  
+  /* / 卡片正面樣式 / */
+  .cardFront {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.875rem;
+    background-color: rgb(191, 191, 191);
+    border-radius: 0.5rem;
+    backface-visibility: hidden;
+  }
+  
+  /* / 卡片背面樣式 / */
+  .cardBack {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.5rem;
+    background-color: #373737;
+    backface-visibility: hidden;
+    transform: rotateY(180deg);
+  }
+  
+  /* / 卡片背面懸停效果 / */
+  .cardBackHover:hover {
+    background-color: #8c8c8c;
+  }
+  
+  /* ////////////////////////////////////////////// */
+  
+  .main {
+    height: 100%;
+    width: 100%;
+    padding: 4vh 8vw
+  }
+  
+  .title {
+    width: 100%;
+    height: auto;
+    background-color: #373737;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-weight: bold;
+    font-size: 25px;
+    padding: 10px 10px;
+    text-align: center;
+  }
+  
+  .rule {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 20px;
+    width: 100%;
+    height: auto;
+    background-color: #373737;
+    color: white;
+  }
+  
+  .startBtContainer {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 20vh;
+  }
+  
+  .startBtContainer button {
+    font-size: 25px;
+    font-weight: bold;
+    padding: 15px 20px;
+    border-radius: 15px;
+    border: none;
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.3);
+  
+  }
+  
+  .startBtContainer button:hover {
+    background-color: #373737;
+    color: white
+  }
+  
+  
+  .nonStart {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    /* 啟用 Flexbox */
+    flex-direction: column;
+    /* 讓子元素垂直排列 */
+    justify-content: center;
+    /* 垂直置中 */
+    align-items: center;
+    /* 水平置中 */
+  }
+  
+  .startUp {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px
+  }
+  
+  .restart {
+    font-size: 25px;
+    padding: 5px 5px;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0px 5px 5px rgb(214, 214, 214);
+  
+  }
+  
+  
+  .gameStart {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-self: center;
+    padding-bottom: 30px;
+  }
+  
+  .end {
+    margin-top: 25px;
+    text-align: center;
+    font-weight: bold;
+    color: red;
+    font-size: 18px
+  }
+  
+  .end button {
+    font-size: 20px;
+    padding: 8px 12px;
+    border: none;
+    border-radius: 5px;
+    box-shadow: 0px 5px 5px rgb(214, 214, 214);
+  }
+  
+  .end button:hover {
+    background-color: #373737;
+    color: white
+  }
+  
