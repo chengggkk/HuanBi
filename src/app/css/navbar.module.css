@@ -1,0 +1,139 @@
+
+html, body {
+    height: 100vh;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .topNav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 7vh;
+    
+    background-color: #F8F8F8;
+    box-shadow: 0px 3px 10px rgba(175, 175, 175, 0.574);
+    display: flex;
+    align-items: center;
+    padding: 10px;
+  
+  }
+  
+  .topNavContainer {
+    display: grid;
+    grid-template-columns: 1fr 4fr 1fr;
+    width: 100%;
+    margin: 0 10px 0 10px;
+  }
+  
+  .topNavContainer div {
+    margin-bottom: 5px
+  }
+  
+  .topNavContainer .websitename {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .topNavContainer .wallet {
+    display: flex;
+    align-items: center; /* 垂直置中 */
+    justify-content: center; /* 水平置中（可選）*/
+    height: 100%; /* 確保 wallet 具有足夠高度 */
+  }
+  
+  .walletButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 60%; /* 可根據需求調整大小 */
+  }
+  
+  .topNavContainer .logo {
+    display: flex;
+    justify-content: left;
+    align-items: center;
+  }
+  
+  
+  
+  .topNav img {
+    width: 100%;
+    /* 設定 logo 寬度 */
+  }
+  
+  
+  
+  
+  
+  
+  .bottomNav {
+    position: fixed;
+    /* 固定位置 */
+    bottom: 0;
+    /* 貼齊底部 */
+    left: 0;
+    /* 貼齊左側 */
+    width: 100%;
+    /* 佔滿整個寬度 */
+    height: 8vh;
+    /* 佔畫面高度的 10% */
+    background-color: #F8F8F8;
+    /* 可自行調整背景顏色 */
+  
+    /* 文字顏色 */
+    display: flex;
+    /* 讓內容水平排列 */
+    justify-content: center;
+    /* 內容置中 */
+    align-items: center;
+    /* 垂直置中 */
+    box-shadow: 0px 5px 26px rgba(99, 99, 99, 0.574);
+    padding: 0 15%;
+  
+  
+  }
+  
+  .iconContainer {
+    display: flex;
+    /* 設置為 flex 容器 */
+    width: 100%;
+    height: 100%;
+    /* 佔滿父容器的寬度 */
+    justify-content: space-between;
+  }
+  
+  .iconContainer .chooseicon{
+    font-size: 30px;
+    color:#373737;
+  }
+  .iconContainer .nochooseicon {
+    font-size: 30px;
+    color: rgb(180, 180, 180)
+  }
+  
+  .iconContainer div{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 35px;
+    height: 100%;
+  }
+  
+  .iconContainer .choose {
+    border-top: 4px solid #373737
+  }
+  
+  
+  
+  .main {
+    height: 82vh;
+    overflow-y: auto; /* 如果內容超出，可以滾動 */
+    margin-top: 8vh;
+    margin-bottom: 10vh;
+  
+  
+  }
