@@ -1,12 +1,15 @@
 from flask import Flask, request, jsonify
 from langchain.chat_models import ChatOpenAI
 from flask_cors import CORS
+import os
+
 
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000"])  # 允許特定來源
 
 # 你的 OpenAI API Key
-OPENAI_API_KEY = ""
+OPENAI_API_KEY =  os.getenv("OPENAI_API_KEY")
+
 
 # 初始化 ChatGPT
 chat_model = ChatOpenAI(model_name="gpt-4", openai_api_key=OPENAI_API_KEY)
