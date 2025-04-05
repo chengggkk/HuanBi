@@ -15,14 +15,6 @@ export default function NewsSummary({ summary }) {
                     {summary ? summary : "Loading summary..."}
                 </div>
             </div>
-            <div className={style.Summary}>
-                <div className={style.SummaryTitle}>
-                    Conclusion
-                </div>
-                <div className={style.SummaryContent}>
-                    asdasdasdasdasdasdasdasdasdasdasdasdasdasdasdasd
-                </div>
-            </div>
 
 
 
