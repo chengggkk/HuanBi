@@ -1,24 +1,101 @@
+// Update imports to include HashLock
 import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic"; // Dynamic import for Chart to avoid SSR issues
-import { SDK, NetworkEnum } from "@1inch/cross-chain-sdk";
-import { FusionSDK } from "@1inch/fusion-sdk";
 import axios from "axios";
+import { SDK, NetworkEnum, HashLock } from "@1inch/cross-chain-sdk";
+// Import ethers - try to be compatible with v6
+import { ethers } from "ethers";
+import FusionSwap from "./fusionswap"; // Import our simplified component
+
 
 // Import the Chart component dynamically to avoid SSR issues
 const Chart = dynamic(() => import("react-apexcharts"), { ssr: false });
 
-// Token addresses
-const TOKEN_ADDRESSES = {
-  "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", // Always token0
-  "DAI": "0x6b175474e89094c44da98b954eedeac495271d0f",
-  "ETH": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", // WETH
-  "BTC": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // WBTC
-  "USDT": "0xdac17f958d2ee523a2206206994597c13d831ec7",
-  "BNB": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
-  "SOL": "0x5aafdfc53af748b410accda106fb0b0a71b67303", // Wrapped SOL on Ethereum
-  "DOGE": "0x4206931337dc273a630d328da6441786bfad668f",
-  "ADA": "0x8a108eac367f2e233cefda1d9fc8f9fad123a0e1"
+// Token addresses by chain ID
+// 1: Ethereum, 56: BSC, 137: Polygon, 43114: Avalanche, 42161: Arbitrum, 10: Optimism, 250: Fantom, 100: Gnosis
+const TOKEN_ADDRESSES_BY_CHAIN = {
+  // Ethereum (1)
+  "1": {
+    "USDC": "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+    "DAI": "0x6b175474e89094c44da98b954eedeac495271d0f",
+    "ETH": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2", // WETH
+    "BTC": "0x2260fac5e5542a773aa44fbcfedf7c193bc2c599", // WBTC
+    "USDT": "0xdac17f958d2ee523a2206206994597c13d831ec7",
+    "BNB": "0xB8c77482e45F1F44dE1745F52C74426C631bDD52",
+    "DOGE": "0x4206931337dc273a630d328da6441786bfad668f",
+    "ADA": "0x8a108eac367f2e233cefda1d9fc8f9fad123a0e1"
+  },
+  // BSC (56)
+  "56": {
+    "USDC": "0x8ac76a51cc950d9822d68b83fe1ad97b32cd580d",
+    "DAI": "0x1af3f329e8be154074d8769d1ffa4ee058b1dbc3",
+    "ETH": "0x2170ed0880ac9a755fd29b2688956bd959f933f8", // WETH on BSC
+    "BTC": "0x7130d2a12b9bcbfae4f2634d864a1ee1ce3ead9c", // BTCB
+    "USDT": "0x55d398326f99059ff775485246999027b3197955", // BSC-USD
+    "BNB": "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c", // WBNB
+    "DOGE": "0xba2ae424d960c26247dd6c32edc70b295c744c43",
+    "ADA": "0x3ee2200efb3400fabb9aacf31297cbdd1d435d47"
+  },
+  // Polygon (137)
+  "137": {
+    "USDC": "0x2791bca1f2de4661ed88a30c99a7a9449aa84174",
+    "DAI": "0x8f3cf7ad23cd3cadbd9735aff958023239c6a063",
+    "ETH": "0x7ceb23fd6bc0add59e62ac25578270cff1b9f619", // WETH on Polygon
+    "BTC": "0x1bfd67037b42cf73acf2047067bd4f2c47d9bfd6", // WBTC on Polygon
+    "USDT": "0xc2132d05d31c914a87c6611c10748aeb04b58e8f",
+    "BNB": "0x3BA4c387f786bFEE076A58914F5Bd38d668B42c3",
+    "DOGE": "0xb7ddc6414bf4f5515b52d8bdd69973ae205ff101",
+    "ADA": "0xda1e53e088023fe4d1dc5a418581748f953a88c9"
+  },
+  // Arbitrum (42161)
+  "42161": {
+    "USDC": "0xff970a61a04b1ca14834a43f5de4533ebddb5cc8",
+    "DAI": "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
+    "ETH": "0x82af49447d8a07e3bd95bd0d56f35241523fbab1", // WETH on Arbitrum
+    "BTC": "0x2f2a2543b76a4166549f7aab2e75bef0aefc5b0f", // WBTC on Arbitrum
+    "USDT": "0xfd086bc7cd5c481dcc9c85ebe478a1c0b69fcbb9",
+    "BNB": "0x20865e63b111b2649ef829ec220536c82c58ad7b",
+    "DOGE": "0xc4b5a88ea2a2860d4700818d69e9e9b0f4f3f4df",
+    "ADA": "0xae48c91df1fe419994ffda27da09d5ac1c451057"
+  },
+  // Optimism (10)
+  "10": {
+    "USDC": "0x7f5c764cbc14f9669b88837ca1490cca17c31607",
+    "DAI": "0xda10009cbd5d07dd0cecc66161fc93d7c9000da1",
+    "ETH": "0x4200000000000000000000000000000000000006", // WETH on Optimism
+    "BTC": "0x68f180fcce6836688e9084f035309e29bf0a2095", // WBTC on Optimism
+    "USDT": "0x94b008aa00579c1307b0ef2c499ad98a8ce58e58",
+    "BNB": "0x4200000000000000000000000000000000000006" // Use ETH as fallback since BNB might not exist on Optimism
+  },
+  // Avalanche (43114)
+  "43114": {
+    "USDC": "0xb97ef9ef8734c71904d8002f8b6bc66dd9c48a6e",
+    "DAI": "0xd586e7f844cea2f87f50152665bcbc2c279d8d70",
+    "ETH": "0x49d5c2bdffac6ce2bfdb6640f4f80f226bc10bab", // WETH on Avalanche
+    "BTC": "0x50b7545627a5162f82a992c33b87adc75187b218", // WBTC on Avalanche
+    "USDT": "0x9702230a8ea53601f5cd2dc00fdbc13d4df4a8c7",
+    "BNB": "0x264c1383ea520f73dd837f915ef3a732e204a493"
+  },
+  // Fantom (250)
+  "250": {
+    "USDC": "0x04068da6c83afcfa0e13ba15a6696662335d5b75",
+    "DAI": "0x8d11ec38a3eb5e956b052f67da8bdc9bef8abf3e",
+    "ETH": "0x74b23882a30290451a17c44f4f05243b6b58c76d", // WETH on Fantom
+    "BTC": "0x321162cd933e2be498cd2267a90534a804051b11", // WBTC on Fantom
+    "USDT": "0x049d68029688eabf473097a2fc38ef61633a3c7a",
+    "BNB": "0xd67de0e0a0fd7b15dc8348bb9be742f3c5850454"
+  },
+  // Gnosis (100)
+  "100": {
+    "USDC": "0xddafbb505ad214d7b80b1f830fccc89b60fb7a83",
+    "DAI": "0xe91d153e0b41518a2ce8dd3d7944fa863463a97d", // xDAI on Gnosis
+    "ETH": "0x6a023ccd1ff6f2045c3309768ead9e68f978f6e1", // WETH on Gnosis
+    "BTC": "0x8e5bbbb09ed1ebde8674cda39a0c169401db4252", // WBTC on Gnosis
+    "USDT": "0x4ecaba5870353805a9f068101a40e0f32ed605c6"
+  }
 };
+// Default to Ethereum token addresses for backwards compatibility
+const TOKEN_ADDRESSES = TOKEN_ADDRESSES_BY_CHAIN["1"];
 
 // Period mapping in seconds
 const PERIOD_MAPPING = {
@@ -40,24 +117,6 @@ export default function MobileCryptoInterface() {
   const [latestPrice, setLatestPrice] = useState(null);
   const [priceChange, setPriceChange] = useState(null);
   const [hoveredData, setHoveredData] = useState(null);
-  
-  // Swap state
-  const [activeTab, setActiveTab] = useState("swap");
-  const [payAmount, setPayAmount] = useState("1");
-  const [receiveAmount, setReceiveAmount] = useState("");
-  const [payCurrency, setPayCurrency] = useState("ETH");
-  const [receiveCurrency, setReceiveCurrency] = useState("USDC");
-  const [expiryDays, setExpiryDays] = useState("7 Days");
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [sdk, setSDK] = useState(null);
-  const [walletAddress, setWalletAddress] = useState(null);
-  const TEST_WALLET_ADDRESS = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e";
-
-  // Conversion state
-  const [cryptoPrices, setCryptoPrices] = useState({});
-  const [payValueUSD, setPayValueUSD] = useState(0);
-  const [receiveValueUSD, setReceiveValueUSD] = useState(0);
-  const [conversionLoading, setConversionLoading] = useState(false);
 
   // Fetch price data from 1inch API for the selected cryptocurrency chart
   useEffect(() => {
@@ -68,7 +127,7 @@ export default function MobileCryptoInterface() {
 
         const token0 = TOKEN_ADDRESSES[selectedCrypto];
         const period = PERIOD_MAPPING[timeframe];
-        
+
         if (!token0) {
           throw new Error("Invalid token selection");
         }
@@ -115,147 +174,6 @@ export default function MobileCryptoInterface() {
     return () => clearInterval(intervalId);
   }, [selectedCrypto, timeframe]);
 
-  // Fetch prices for all currencies for swap conversion
-  useEffect(() => {
-    const fetchCryptoPrices = async () => {
-      try {
-        setConversionLoading(true);
-        
-        // Get prices for all tokens vs USDC using our 1inch API endpoint
-        const priceData = {};
-        
-        // For efficiency, we'll fetch a small set of currencies
-        const currencies = ["ETH", "BTC", "DAI", "USDT", "BNB", "SOL"];
-        
-        // USDC is our base token, so we set its price to 1
-        priceData["USDC"] = { price: 1 };
-        
-        for (const currency of currencies) {
-          if (currency !== "USDC") {
-            try {
-              const token0 = TOKEN_ADDRESSES[currency];
-              const period = "86400"; // Use daily data for pricing
-              
-              const response = await axios.get(
-                `https://1inchproxy-kcj2-paaxgqpwh-chengggkks-projects.vercel.app/api/chart?token0=${token0}&period=${period}`
-              );
-              
-              if (response.data && response.data.data && response.data.data.length > 0) {
-                // Get the latest price
-                const latestDataPoint = response.data.data[response.data.data.length - 1];
-                priceData[currency] = { price: latestDataPoint.close };
-              }
-            } catch (error) {
-              console.error(`Error fetching price for ${currency}:`, error);
-            }
-          }
-        }
-        
-        setCryptoPrices(priceData);
-        setConversionLoading(false);
-      } catch (err) {
-        console.error("Error fetching crypto prices:", err);
-        setConversionLoading(false);
-      }
-    };
-
-    fetchCryptoPrices();
-    const intervalId = setInterval(fetchCryptoPrices, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
-
-  // Calculate conversion when pay amount, pay currency, or receive currency changes
-  useEffect(() => {
-    if (Object.keys(cryptoPrices).length > 0 && !isNaN(parseFloat(payAmount))) {
-      const payPrice = cryptoPrices[payCurrency]?.price;
-      const receivePrice = cryptoPrices[receiveCurrency]?.price;
-      
-      if (payPrice && receivePrice) {
-        const payUsdValue = parseFloat(payAmount) * payPrice;
-        const newReceiveAmount = (payUsdValue / receivePrice).toFixed(8);
-        
-        setPayValueUSD(payUsdValue);
-        setReceiveValueUSD(payUsdValue); // Same USD value (minus fees in a real app)
-        setReceiveAmount(newReceiveAmount);
-      }
-    }
-  }, [payAmount, payCurrency, receiveCurrency, cryptoPrices]);
-
-  // Update pay amount when receive amount is changed directly
-  const handleReceiveAmountChange = (e) => {
-    const newReceiveAmount = e.target.value;
-    setReceiveAmount(newReceiveAmount);
-    
-    if (Object.keys(cryptoPrices).length > 0 && !isNaN(parseFloat(newReceiveAmount))) {
-      const payPrice = cryptoPrices[payCurrency]?.price;
-      const receivePrice = cryptoPrices[receiveCurrency]?.price;
-      
-      if (payPrice && receivePrice) {
-        const receiveUsdValue = parseFloat(newReceiveAmount) * receivePrice;
-        const newPayAmount = (receiveUsdValue / payPrice).toFixed(8);
-        
-        setPayValueUSD(receiveUsdValue);
-        setReceiveValueUSD(receiveUsdValue);
-        setPayAmount(newPayAmount);
-      }
-    }
-  };
-
-  useEffect(() => {
-    const initSDK = async () => {
-      try {
-        // Note: Replace 'YOUR_AUTH_KEY' with actual 1inch API key
-        const fusionSDK = new FusionSDK({
-          url: "https://api.1inch.dev/fusion-plus",
-          authKey: process.env.NEXT_PUBLIC_INCH_API_KEY
-        });
-        setSDK(fusionSDK);
-      } catch (error) {
-        console.error("Failed to initialize SDK:", error);
-      }
-    };
-
-    const connectTestWallet = () => {
-      // Simulate wallet connection with test wallet
-      setWalletAddress(TEST_WALLET_ADDRESS);
-      setWalletConnected(true);
-      console.log("Connected with test wallet:", TEST_WALLET_ADDRESS);
-    };
-
-    initSDK();
-    connectTestWallet();
-  }, []);
-
-  // Swap function
-  const handleSwap = async () => {
-    if (!walletConnected || !sdk) {
-      alert("Wallet connection failed!");
-      return;
-    }
-
-    try {
-      // Validate swap amounts and currencies
-      if (!payAmount || !receiveAmount) {
-        alert("Please enter swap amounts");
-        return;
-      }
-
-      // Log swap details for development
-      console.log("Swap Details:", {
-        fromCurrency: payCurrency,
-        toCurrency: receiveCurrency,
-        fromAmount: payAmount,
-        toAmount: receiveAmount,
-        walletAddress: walletAddress
-      });
-
-      alert(`Simulated Swap from ${payAmount} ${payCurrency} to ${receiveAmount} ${receiveCurrency}`);
-    } catch (error) {
-      console.error("Swap simulation failed:", error);
-      alert(`Swap failed: ${error.message}`);
-    }
-  };
-
   // Chart options
   const options = {
     chart: {
@@ -272,7 +190,7 @@ export default function MobileCryptoInterface() {
             const selectedPoint = priceData[0].data[dataPointIndex];
             const price = selectedPoint.y;
             setHoveredData({
-              date: new Date(selectedPoint.x).toLocaleString("en-US", { 
+              date: new Date(selectedPoint.x).toLocaleString("en-US", {
                 year: "numeric", month: "2-digit", day: "2-digit",
                 hour: "2-digit", minute: "2-digit"
               }),
@@ -315,15 +233,15 @@ export default function MobileCryptoInterface() {
     xaxis: {
       type: "datetime",
       labels: {
-        formatter: function(value, timestamp) {
+        formatter: function (value, timestamp) {
           // Custom formatting based on timeframe
           const date = new Date(timestamp);
           if (timeframe === "5m" || timeframe === "15m" || timeframe === "1h") {
-            return date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           } else if (timeframe === "4h" || timeframe === "1d") {
-            return `${date.getMonth()+1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
+            return `${date.getMonth() + 1}/${date.getDate()} ${date.getHours()}:${String(date.getMinutes()).padStart(2, '0')}`;
           } else {
-            return `${date.getMonth()+1}/${date.getDate()}`;
+            return `${date.getMonth() + 1}/${date.getDate()}`;
           }
         }
       },
@@ -363,25 +281,18 @@ export default function MobileCryptoInterface() {
         const l = data.y[2].toFixed(4);
         const c = data.y[3].toFixed(4);
         const date = new Date(data.x).toLocaleString();
-        
+
         return `
-          <div class="apexcharts-tooltip-candlestick" style="padding: 8px; background: #fff; border: 1px solid #ccc;">
-            <div>${date}</div>
-            <div>Open: ${o}</div>
-            <div>High: ${h}</div>
-            <div>Low: ${l}</div>
-            <div>Close: ${c}</div>
-          </div>
-        `;
+        <div class="apexcharts-tooltip-candlestick" style="padding: 8px; background: #fff; border: 1px solid #ccc;">
+          <div>${date}</div>
+          <div>Open: ${o}</div>
+          <div>High: ${h}</div>
+          <div>Low: ${l}</div>
+          <div>Close: ${c}</div>
+        </div>
+      `;
       }
     }
-  };
-
-  // Switch currencies
-  const handleSwitchCurrencies = () => {
-    const tempCurrency = payCurrency;
-    setPayCurrency(receiveCurrency);
-    setReceiveCurrency(tempCurrency);
   };
 
   // Render the component
@@ -424,7 +335,7 @@ export default function MobileCryptoInterface() {
               ${latestPrice.toFixed(4)}
             </span>
             {priceChange !== null && (
-              <span 
+              <span
                 style={{
                   padding: '3px 6px',
                   backgroundColor: priceChange >= 0 ? "#16A34A" : "#DC2626",
@@ -442,10 +353,10 @@ export default function MobileCryptoInterface() {
 
       {/* Chart */}
       {loading ? (
-        <div style={{ 
-          height: '250px', 
-          display: 'flex', 
-          justifyContent: 'center', 
+        <div style={{
+          height: '250px',
+          display: 'flex',
+          justifyContent: 'center',
           alignItems: 'center',
           backgroundColor: '#f8fafc'
         }}>
@@ -453,176 +364,24 @@ export default function MobileCryptoInterface() {
         </div>
       ) : (
         <div style={{ marginBottom: '10px', backgroundColor: '#f8fafc', padding: '5px' }}>
-          <Chart 
-            options={options} 
-            series={priceData} 
-            type="candlestick" 
-            height={300} 
+          <Chart
+            options={options}
+            series={priceData}
+            type="candlestick"
+            height={300}
           />
         </div>
       )}
 
-      {/* Swap Interface */}
+      {/* Swap Interface - Using our simplified component */}
       <div style={{ border: '1px solid #e0e0e0', padding: '10px' }}>
-        {/* Tabs */}
-        <div style={{ display: 'flex', marginBottom: '10px' }}>
-          <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>
-            Swap Currencies
-          </div>
-        </div>
-
-        {/* Pay Section */}
-        <div style={{ marginBottom: '15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-            <span style={{ fontSize: '16px' }}>You pay</span>
-            <span style={{ fontSize: '16px' }}>Balance: 0 MAX</span>
-          </div>
-          <input
-            type="text"
-            value={payAmount}
-            onChange={(e) => setPayAmount(e.target.value)}
-            style={{ 
-              width: '100%', 
-              padding: '8px', 
-              fontSize: '16px', 
-              marginBottom: '5px',
-              boxSizing: 'border-box',
-              border: '1px solid #ccc'
-            }}
-          />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <select 
-              value={payCurrency}
-              onChange={(e) => setPayCurrency(e.target.value)}
-              style={{ 
-                padding: '5px', 
-                fontSize: '16px',
-                border: '1px solid #ccc',
-                width: '30%'
-              }}
-            >
-              <option value="ETH">ETH</option>
-              <option value="BTC">BTC</option>
-              <option value="USDC">USDC</option>
-              <option value="BNB">BNB</option>
-              <option value="SOL">SOL</option>
-              <option value="DAI">DAI</option>
-              <option value="USDT">USDT</option>
-            </select>
-            <button 
-              onClick={handleSwitchCurrencies}
-              style={{
-                background: 'none',
-                border: 'none',
-                fontSize: '24px',
-                cursor: 'pointer'
-              }}
-            >
-              ⇅
-            </button>
-          </div>
-          <div style={{ marginTop: '5px', fontSize: '14px', color: '#666' }}>
-            {!conversionLoading && payValueUSD ? `~$${payValueUSD.toFixed(2)} USD` : "Loading..."}
-          </div>
-        </div>
-
-        {/* Receive Section */}
-        <div style={{ marginBottom: '15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
-            <span style={{ fontSize: '16px' }}>You receive</span>
-            <span style={{ fontSize: '16px' }}>Balance: 0</span>
-          </div>
-          <input
-            type="text"
-            value={receiveAmount}
-            onChange={handleReceiveAmountChange}
-            style={{ 
-              width: '100%', 
-              padding: '8px', 
-              fontSize: '16px', 
-              marginBottom: '5px',
-              boxSizing: 'border-box',
-              border: '1px solid #ccc'
-            }}
-          />
-          <select 
-            value={receiveCurrency}
-            onChange={(e) => setReceiveCurrency(e.target.value)}
-            style={{ 
-              padding: '5px', 
-              fontSize: '16px',
-              border: '1px solid #ccc',
-              width: '30%'
-            }}
-          >
-            <option value="USDC">USDC</option>
-            <option value="ETH">ETH</option>
-            <option value="BTC">BTC</option>
-            <option value="BNB">BNB</option>
-            <option value="SOL">SOL</option>
-            <option value="DAI">DAI</option>
-            <option value="USDT">USDT</option>
-          </select>
-          <div style={{ marginTop: '5px', fontSize: '14px', color: '#666' }}>
-            {!conversionLoading && receiveValueUSD ? `~$${receiveValueUSD.toFixed(2)} USD` : "Loading..."}
-          </div>
-        </div>
-
-        {/* Conversion Rate */}
-        <div style={{ 
-          marginBottom: '15px', 
-          padding: '8px', 
-          backgroundColor: '#f5f5f5', 
-          borderRadius: '4px',
-          fontSize: '14px'
-        }}>
-          {conversionLoading ? (
-            "Loading conversion rates..."
-          ) : (
-            Object.keys(cryptoPrices).length > 0 && (
-              <>
-                <div>Exchange Rate:</div>
-                <div style={{ fontWeight: 'bold' }}>
-                  1 {payCurrency} = {
-                    cryptoPrices[payCurrency] && cryptoPrices[receiveCurrency] ? 
-                    (cryptoPrices[payCurrency].price / cryptoPrices[receiveCurrency].price).toFixed(6) : 
-                    "..."
-                  } {receiveCurrency}
-                </div>
-              </>
-            )
-          )}
-        </div>
-
-        {/* Action Buttons */}
-        <div style={{ marginBottom: '15px' }}>
-        <button 
-        onClick={handleSwap}
-        disabled={!walletConnected}
-        style={{ 
-          width: '100%', 
-          padding: '10px', 
-          fontSize: '16px',
-          backgroundColor: walletConnected ? '#3498db' : '#cccccc',
-          color: 'white',
-          border: 'none',
-          marginBottom: '10px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          borderRadius: '4px',
-          cursor: walletConnected ? 'pointer' : 'not-allowed'
-        }}
-      >
-        {walletConnected ? 'SWAP!' : 'Connect Wallet'}
-      </button>
-        </div>
+        <FusionSwap />
       </div>
 
       {/* Bottom Navigation */}
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-around', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-around',
         padding: '10px',
         borderTop: '1px solid #ccc',
         position: 'fixed',
@@ -631,24 +390,24 @@ export default function MobileCryptoInterface() {
         right: '0',
         backgroundColor: 'white'
       }}>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           fontSize: '24px'
         }}>
           📰
         </div>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           fontSize: '24px'
         }}>
           📈
         </div>
-        <div style={{ 
-          display: 'flex', 
+        <div style={{
+          display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           fontSize: '24px'

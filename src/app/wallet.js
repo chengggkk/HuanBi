@@ -1,16 +1,44 @@
 "use client"
 import { useEffect, useState, useRef } from "react";
 import style from "./css/wallet.module.css";
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faArrowRightArrowLeft, faArrowRight } from '@fortawesome/free-solid-svg-icons';
-import { MiniKit, VerifyCommandInput, VerificationLevel } from '@worldcoin/minikit-js';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faArrowRightArrowLeft, faArrowRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
+import { useAccount, useBalance, useDisconnect, useConnect } from "wagmi";
 
-export default function Wallet({ closeWallet }) {
+export default function Wallet({ 
+  closeWallet, 
+  isVerified, 
+  verificationData,
+  setWalletStatus
+}) {
   const [isVisible, setIsVisible] = useState(false);
-  const [worldID, setWorldID] = useState(null);
+  const [tokenBalances, setTokenBalances] = useState([]);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+  const [balanceError, setBalanceError] = useState(null);
+  const [usdcBalance, setUsdcBalance] = useState("0.00");
   const modalRef = useRef(null);
+  const [isMobile, setIsMobile] = useState(false);
+  
+  // Use Wagmi hooks
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { connect, connectors, isPending, error: connectError } = useConnect();
+  
+  // Get USDC balance
+  const { data: usdcBalanceData, isLoading: isLoadingUsdcBalance } = useBalance({
+    address: address,
+    token: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', // USDC contract address
+    enabled: !!address,
+  });
 
   useEffect(() => {
+    // Check if the user is on a mobile device
+    const checkMobile = () => {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+    };
+    
+    setIsMobile(checkMobile());
+    
     // When component mounts, trigger animation
     setTimeout(() => {
       setIsVisible(true);
@@ -24,6 +52,82 @@ export default function Wallet({ closeWallet }) {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+
+  // Update wallet status in parent component
+  useEffect(() => {
+    if (isConnected && address) {
+      setWalletStatus(isVerified 
+        ? "✅ Verified Human" 
+        : `🦊 ${formatAddress(address)}`
+      );
+      localStorage.setItem('walletAddress', address);
+    } else {
+      setWalletStatus("Connect Wallet");
+    }
+  }, [isConnected, address, isVerified, setWalletStatus]);
+
+  // Update USDC balance when data changes
+  useEffect(() => {
+    if (usdcBalanceData) {
+      setUsdcBalance(parseFloat(usdcBalanceData.formatted).toFixed(2));
+    }
+  }, [usdcBalanceData]);
+
+  // Fetch token balances when wallet address changes
+  useEffect(() => {
+    const fetchBalances = async () => {
+      if (!address) return;
+      
+      setIsLoadingBalances(true);
+      setBalanceError(null);
+      
+      try {
+        const response = await fetch(`https://1inchproxy-kcj2-q9s6yhmet-chengggkks-projects.vercel.app/api/balance?walletaddress=${address}`);
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch balances: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        // Process the data to find non-zero balances
+        const nonZeroBalances = Object.entries(data)
+          .filter(([_, balance]) => balance !== "0")
+          .map(([tokenAddress, balance]) => {
+            // Check if this is USDC
+            const isUSDC = tokenAddress.toLowerCase() === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+            
+            // Convert balance to a readable format
+            let formattedBalance;
+            if (isUSDC) {
+              // USDC has 6 decimals
+              formattedBalance = (Number(balance) / 1_000_000).toFixed(2);
+              // We'll use Wagmi's balance data instead of this
+            } else {
+              // For other tokens (simplified display)
+              formattedBalance = balance;
+            }
+            
+            return {
+              tokenAddress,
+              balance: formattedBalance,
+              isUSDC
+            };
+          });
+        
+        setTokenBalances(nonZeroBalances);
+      } catch (err) {
+        console.error("Error fetching balances:", err);
+        setBalanceError(err.message);
+      } finally {
+        setIsLoadingBalances(false);
+      }
+    };
+    
+    if (address) {
+      fetchBalances();
+    }
+  }, [address]);
 
   const handleClickOutside = (event) => {
     // Check if click is outside the wallet modal
@@ -41,33 +145,25 @@ export default function Wallet({ closeWallet }) {
     }, 300); // This time should equal CSS transition time
   };
 
-  const handleConnect = async () => {
-    try {
-      if (!MiniKit.isInstalled()) {
-        console.log("MiniKit not installed");
-        return;
-      }
+  const handleDisconnect = () => {
+    disconnect();
+  };
 
-      const verifyPayload = {
-        action: 'wallet-connect', // Your action ID from Developer Portal
-        verification_level: VerificationLevel.Orb,
-      };
+  // Connect to wallet
+  const handleConnect = (connector) => {
+    connect({ connector });
+  };
 
-      const { finalPayload } = await MiniKit.commandsAsync.verify(verifyPayload);
-      
-      if (finalPayload.status === 'error') {
-        console.log('Error payload', finalPayload);
-        return;
-      }
+  // Format the wallet address for display
+  const formatAddress = (address) => {
+    if (!address) return "";
+    return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+  };
 
-      // Set worldID if verification successful
-      setWorldID(finalPayload.nullifier_hash);
-      
-      // You might want to send this to your backend for verification
-      console.log("Verification successful!", finalPayload);
-    } catch (error) {
-      console.error("Error connecting wallet:", error);
-    }
+  // Format the nullifier hash for verification
+  const formatNullifierHash = (hash) => {
+    if (!hash) return "";
+    return `${hash.substring(0, 6)}...${hash.substring(hash.length - 4)}`;
   };
 
   return (
@@ -80,32 +176,104 @@ export default function Wallet({ closeWallet }) {
       >
         <div className={style.title}>My Wallet</div>
         
-        {worldID ? (
+        {isConnected ? (
           <>
-            <p className={style.account}>0xxxxxxxxx</p>
-            <div className={style.money}>$12.05</div>
-            <div className={style.actions}>
-              <div>
-                <button><FontAwesomeIcon icon={faArrowRightArrowLeft} /></button>
-                <p>Swap</p>
-              </div>
-              <div>
-                <button><FontAwesomeIcon icon={faArrowRight}/></button>
-                <p>Send</p>
-              </div>
+            <div className={style.userInfo}>
+              {address && (
+                <p className={style.account}>{formatAddress(address)}</p>
+              )}
+              
+              {!address && isVerified && verificationData && (
+                <p className={style.account}>{formatNullifierHash(verificationData.nullifierHash)}</p>
+              )}
+              
+              {isVerified && verificationData && (
+                <p className={style.verified}>✅ Verified Human</p>
+              )}
+              
             </div>
+            
+            <div className={style.money}>
+              {isLoadingUsdcBalance || isLoadingBalances ? (
+                <span>Loading balances... <FontAwesomeIcon icon={faSpinner} spin /></span>
+              ) : (
+                `$${usdcBalance}`
+              )}
+            </div>
+            
+            {balanceError && (
+              <div className={style.errorMessage} style={{ color: 'red', fontSize: '14px', textAlign: 'center' }}>
+                {balanceError}
+              </div>
+            )}
+            
           </>
         ) : (
           <div className={style.connectContainer} style={{ 
             flex: '1',
             display: 'flex', 
+            flexDirection: 'column',
             justifyContent: 'center', 
             alignItems: 'center',
-            width: '100%'
+            width: '100%',
+            gap: '12px'
           }}>
-            <button className={style.connectButton} onClick={handleConnect}>
-              Connect World ID
-            </button>
+            {/* Custom wallet connection buttons */}
+            <div className={style.connectorButtons} style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              gap: '10px',
+              width: '100%',
+              maxWidth: '280px'
+            }}>
+              {connectors.map((connector) => (
+                <button
+                  key={connector.uid}
+                  onClick={() => handleConnect(connector)}
+                  disabled={isPending}
+                  className={style.connectButton}
+                  style={{ 
+                    padding: '12px', 
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px'
+                  }}
+                >
+                  {isPending && connector.name === connectors.find(c => c.uid === connector.uid)?.name ? (
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                  ) : null}
+                  
+                  {/* Display wallet icons or names */}
+                  {connector.name === 'MetaMask' && '🦊 '}
+                  {connector.name === 'Coinbase Wallet' && '📱 '}
+                  {connector.name === 'WalletConnect' && '🔗 '}
+                  
+                  Connect with {connector.name}
+                </button>
+              ))}
+            </div>
+            
+            {connectError && (
+              <p className={style.errorMessage} style={{ 
+                color: 'red', 
+                fontSize: '14px', 
+                textAlign: 'center',
+                marginTop: '10px'
+              }}>
+                {connectError.message}
+              </p>
+            )}
+            
+            <p className={style.connectMessage} style={{ 
+              fontSize: '14px', 
+              textAlign: 'center', 
+              marginTop: '10px',
+              color: '#666'
+            }}>
+              Connect your wallet to continue
+            </p>
           </div>
         )}
       </div>
