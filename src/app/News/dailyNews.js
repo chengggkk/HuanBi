@@ -30,7 +30,7 @@ export default function DailyNews({ setSummary }) {
         const headlines = (data.articles || []).map(article => article.title);
         
         // 確保請求的 URL 正確
-        fetch(`${API_BASE_URL}/generate-summary`, {
+        fetch("http://127.0.0.1:5000/generate-summary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ headlines })
