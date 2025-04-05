@@ -16,6 +16,9 @@
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
+    "@metamask/sdk": "^0.32.1",
+    "@tanstack/react-query": "^5.71.10",
+    "@worldcoin/idkit": "^2.0.2",
     "@worldcoin/mini-apps-ui-kit-react": "^0.0.8",
     "@worldcoin/minikit-js": "^1.8.0",
     "apexcharts": "^4.5.0",
@@ -28,7 +31,9 @@
     "path": "^0.12.7",
     "react": "^19.0.0",
     "react-apexcharts": "^1.7.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "viem": "^2.25.0",
+    "wagmi": "^2.14.16"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
