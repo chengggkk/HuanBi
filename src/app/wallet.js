@@ -4,18 +4,34 @@ import style from "./css/wallet.module.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRightArrowLeft, faArrowRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { useAccount, useBalance, useDisconnect, useConnect } from "wagmi";
+import { MiniKit, VerifyCommandInput, VerificationLevel } from '@worldcoin/minikit-js';
+import { WalletConnectModal } from '@walletconnect/modal';
+
+const modal = new WalletConnectModal({
+  projectId: '14995ff2a544d3f7fc84005cbdfcba47', // Make sure this is a valid one from WalletConnect Cloud
+  metadata: {
+    name: "huanbi",
+    description: "My App using WalletConnect",
+    url: "https://a90c-111-235-226-130.ngrok-free.app/",
+    icons: ["https://myapp.com/icon.png"]
+  }
+});
+
 
 export default function Wallet({ 
   closeWallet, 
   isVerified, 
   verificationData,
-  setWalletStatus
+  setWalletStatus,
+  setIsVerified,
+  setVerificationData
 }) {
   const [isVisible, setIsVisible] = useState(false);
   const [tokenBalances, setTokenBalances] = useState([]);
   const [isLoadingBalances, setIsLoadingBalances] = useState(false);
   const [balanceError, setBalanceError] = useState(null);
   const [usdcBalance, setUsdcBalance] = useState("0.00");
+  const [isVerifying, setIsVerifying] = useState(false);
   const modalRef = useRef(null);
   const [isMobile, setIsMobile] = useState(false);
   
@@ -31,20 +47,118 @@ export default function Wallet({
     enabled: !!address,
   });
 
-  // Initialize wallet on component mount
-  useEffect(() => {
-    // Initialize wallet from localStorage
-    const savedWalletAddress = localStorage.getItem('walletAddress');
-    
-    // If there's a saved wallet address and we're not connected
-    if (savedWalletAddress && !isConnected) {
-      // Try to reconnect with the appropriate connector
-      const connector = connectors.find(c => c.ready);
-      if (connector) {
-        connect({ connector });
-      }
+  // Initialize and check if the World ID MiniKit is available
+  const [isMiniKitAvailable, setIsMiniKitAvailable] = useState(false);
+
+  // Verify with World ID - safer version with proper error handling
+  const handleVerify = async () => {
+    if (!isMiniKitAvailable) {
+      console.log("World ID MiniKit is not available");
+      return;
     }
+
+    try {
+      setIsVerifying(true);
+
+      // Check again if MiniKit and its verify command are available
+      if (typeof MiniKit === 'undefined' || typeof MiniKit.commandsAsync?.verify !== 'function') {
+        throw new Error("MiniKit or verify function is not available");
+      }
+
+      // Prepare verification payload
+      const verifyPayload = {
+        action: 'verify', // Replace with your action ID from Developer Portal
+        verification_level: VerificationLevel.Orb, // Or VerificationLevel.Device
+      };
+
+      // Request verification
+      const response = await MiniKit.commandsAsync.verify(verifyPayload);
+      
+      if (response.finalPayload.status === 'success') {
+        // Store verification data
+        const verificationResult = {
+          nullifierHash: response.finalPayload.nullifier_hash,
+          merkleRoot: response.finalPayload.merkle_root,
+          proof: response.finalPayload.proof,
+          verificationLevel: response.finalPayload.verification_level,
+        };
+        
+        // Send to backend for verification
+        await verifyProofOnBackend(verificationResult, verifyPayload.action, verifyPayload.signal);
+        
+        // Update verification status
+        setIsVerified(true);
+        setVerificationData(verificationResult);
+        
+        // Update wallet status
+        setWalletStatus("✅ Verified Human");
+      } else {
+        console.error("Verification failed:", response.finalPayload);
+      }
+    } catch (error) {
+      console.error("Error during verification:", error);
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // Verify proof on backend
+  const verifyProofOnBackend = async (payload, action, signal) => {
+    try {
+      const response = await fetch('/api/verify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          payload,
+          action,
+          signal,
+        }),
+      });
+
+      const result = await response.json();
+      
+      if (result.status === 200) {
+        console.log("Verification successful on backend");
+        return true;
+      } else {
+        console.error("Backend verification failed:", result);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error verifying with backend:", error);
+      return false;
+    }
+  };
+
+  useEffect(() => {
+    // Check if World ID MiniKit is available - safer version
+    const checkMiniKit = () => {
+      try {
+        // First check if MiniKit is defined
+        if (typeof MiniKit === 'undefined') {
+          console.log("MiniKit is not defined");
+          return false;
+        }
+        
+        // Then check if isInstalled method exists and call it
+        if (typeof MiniKit.isInstalled === 'function') {
+          const isAvailable = MiniKit.isInstalled();
+          return isAvailable;
+        } else {
+          console.log("MiniKit.isInstalled is not a function");
+          return false;
+        }
+      } catch (error) {
+        console.log("Error checking MiniKit availability:", error);
+        return false;
+      }
+    };
     
+    const isMiniKitAvailableResult = checkMiniKit();
+    setIsMiniKitAvailable(isMiniKitAvailableResult);
+
     // Check if the user is on a mobile device
     const checkMobile = () => {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -64,6 +178,21 @@ export default function Wallet({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
+  }, []);
+
+  // Initialize wallet from localStorage
+  useEffect(() => {
+    // Check for saved wallet address
+    const savedWalletAddress = localStorage.getItem('walletAddress');
+    
+    // If there's a saved wallet address and we're not connected
+    if (savedWalletAddress && !isConnected) {
+      // Try to reconnect with the appropriate connector
+      const connector = connectors.find(c => c.ready);
+      if (connector) {
+        connect({ connector });
+      }
+    }
   }, [connect, connectors, isConnected]);
 
   // Update wallet status in parent component
@@ -88,6 +217,20 @@ export default function Wallet({
     }
   }, [usdcBalanceData]);
 
+  // Auto trigger verification when wallet opens (if connected and not verified)
+  useEffect(() => {
+    // Only attempt verification if:
+    // 1. Wallet is visible (opened)
+    // 2. The user is connected
+    // 3. The user is not already verified
+    // 4. MiniKit is available
+    // 5. Not currently verifying
+    if (isVisible && isConnected && address && !isVerified && isMiniKitAvailable && !isVerifying) {
+      console.log("Auto-triggering verification");
+      handleVerify();
+    }
+  }, [isVisible, isConnected, address, isVerified, isMiniKitAvailable]);
+
   // Fetch token balances when wallet address changes
   useEffect(() => {
     const fetchBalances = async () => {
@@ -106,31 +249,36 @@ export default function Wallet({
         const data = await response.json();
         
         // Process the data to find non-zero balances
-        const nonZeroBalances = Object.entries(data)
-          .filter(([_, balance]) => balance !== "0")
-          .map(([tokenAddress, balance]) => {
-            // Check if this is USDC
-            const isUSDC = tokenAddress.toLowerCase() === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-            
-            // Convert balance to a readable format
-            let formattedBalance;
-            if (isUSDC) {
-              // USDC has 6 decimals
-              formattedBalance = (Number(balance) / 1_000_000).toFixed(2);
-              // We'll use Wagmi's balance data instead of this
-            } else {
-              // For other tokens (simplified display)
-              formattedBalance = balance;
-            }
-            
-            return {
-              tokenAddress,
-              balance: formattedBalance,
-              isUSDC
-            };
-          });
-        
-        setTokenBalances(nonZeroBalances);
+        if (data && typeof data === 'object') {
+          const nonZeroBalances = Object.entries(data)
+            .filter(([_, balance]) => balance !== "0")
+            .map(([tokenAddress, balance]) => {
+              // Check if this is USDC
+              const isUSDC = tokenAddress.toLowerCase() === "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+              
+              // Convert balance to a readable format
+              let formattedBalance;
+              if (isUSDC) {
+                // USDC has 6 decimals
+                formattedBalance = (Number(balance) / 1_000_000).toFixed(2);
+                // We'll use Wagmi's balance data instead of this
+              } else {
+                // For other tokens (simplified display)
+                formattedBalance = balance;
+              }
+              
+              return {
+                tokenAddress,
+                balance: formattedBalance,
+                isUSDC
+              };
+            });
+          
+          setTokenBalances(nonZeroBalances);
+        } else {
+          console.error("Invalid balance data received:", data);
+          setBalanceError("Invalid balance data received");
+        }
       } catch (err) {
         console.error("Error fetching balances:", err);
         setBalanceError(err.message);
@@ -167,7 +315,11 @@ export default function Wallet({
 
   // Connect to wallet
   const handleConnect = (connector) => {
-    connect({ connector });
+    if (connector) {
+      connect({ connector });
+    } else {
+      console.error("No valid connector provided");
+    }
   };
 
   // Format the wallet address for display
@@ -223,6 +375,38 @@ export default function Wallet({
               </div>
             )}
             
+            {!isVerified && isMiniKitAvailable && (
+              <button 
+                onClick={handleVerify}
+                className={style.verifyButton}
+                style={{
+                  marginTop: '15px',
+                  padding: '8px 12px',
+                  background: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '5px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px'
+                }}
+                disabled={isVerifying}
+              >
+                {isVerifying ? (
+                  <>
+                    <FontAwesomeIcon icon={faSpinner} spin />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    Verify with World ID
+                  </>
+                )}
+              </button>
+            )}
+            
             <button 
               onClick={handleDisconnect}
               className={style.disconnectButton}
@@ -258,33 +442,38 @@ export default function Wallet({
               width: '100%',
               maxWidth: '280px'
             }}>
-              {connectors.map((connector) => (
-                <button
-                  key={connector.uid}
-                  onClick={() => handleConnect(connector)}
-                  disabled={isPending}
-                  className={style.connectButton}
-                  style={{ 
-                    padding: '12px', 
-                    width: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px'
-                  }}
-                >
-                  {isPending && connector.name === connectors.find(c => c.uid === connector.uid)?.name ? (
-                    <FontAwesomeIcon icon={faSpinner} spin />
-                  ) : null}
-                  
-                  {/* Display wallet icons or names */}
-                  {connector.name === 'MetaMask' && '🦊 '}
-                  {connector.name === 'Coinbase Wallet' && '📱 '}
-                  {connector.name === 'WalletConnect' && '🔗 '}
-                  
-                  Connect with {connector.name}
-                </button>
-              ))}
+              {connectors && connectors.length > 0 ? (
+                connectors.map((connector) => (
+                  connector ? (
+                    <button
+                      key={connector.uid || Math.random().toString()}
+                      onClick={() => handleConnect(connector)}
+                      disabled={isPending}
+                      className={style.connectButton}
+                      style={{ 
+                        padding: '12px', 
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px'
+                      }}
+                    >
+                      {isPending ? (
+                        <FontAwesomeIcon icon={faSpinner} spin />
+                      ) : null}
+                      
+                      {connector.name === 'MetaMask' && '🦊 '}
+                      {connector.name === 'Coinbase Wallet' && '📱 '}
+                      {connector.name === 'WalletConnect' && '🔗 '}
+                      
+                      Connect with {connector.name || 'Wallet'}
+                    </button>
+                  ) : null
+                ))
+              ) : (
+                <p>No wallet connectors available</p>
+              )}
             </div>
             
             {connectError && (
@@ -305,6 +494,24 @@ export default function Wallet({
               color: '#666'
             }}>
               Connect your wallet to continue
+            </p>
+          </div>
+        )}
+
+        {isMiniKitAvailable && !isConnected && (
+          <div style={{ 
+            marginTop: '20px', 
+            textAlign: 'center',
+            padding: '10px',
+            border: '1px solid #e0e0e0',
+            borderRadius: '5px',
+            backgroundColor: '#f9f9f9'
+          }}>
+            <p style={{ marginBottom: '10px', fontSize: '14px' }}>
+              World ID verification is available
+            </p>
+            <p style={{ fontSize: '12px', color: '#666' }}>
+              Connect your wallet first to verify with World ID
             </p>
           </div>
         )}
