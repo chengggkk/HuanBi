@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react';
 import NewsDetail from './newsDetail';
-import NewsSummary from './newsSummary'
+import NewsSummary from './newsSummary';
 import style from '../css/dailynews.module.css';
 
 export default function DailyNews({ setSummary }) {
   const [articles, setArticles] = useState([]);
   const [selectedArticle, setSelectedArticle] = useState(null);
-  const [showModal, setShowModal] = useState(false); // 控制 Modal 是否顯示
+  const [showModal, setShowModal] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const articlesPerPage = 10;
 
   const today = new Date();
   const lastWeek = new Date();
@@ -21,11 +23,7 @@ export default function DailyNews({ setSummary }) {
       .then(response => response.json())
       .then(data => {
         setArticles(data.articles || []);
-
-        // 提取新聞標題
         const headlines = (data.articles || []).map(article => article.title);
-
-        // 發送標題到後端請求摘要
         fetch("http://127.0.0.1:5000/generate-summary", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -38,19 +36,30 @@ export default function DailyNews({ setSummary }) {
       .catch(error => console.error('Error fetching news:', error));
   }, []);
 
- const handleCardClick = (article) => {
+  const handleCardClick = (article) => {
     setSelectedArticle(article);
-    setShowModal(true); // 顯示 Modal
+    setShowModal(true);
   };
 
   const handleCloseModal = () => {
-    setShowModal(false); // 隱藏 Modal
+    setShowModal(false);
+  };
+
+  // 分頁邏輯
+  const totalPages = Math.ceil(articles.length / articlesPerPage);
+  const indexOfLastArticle = currentPage * articlesPerPage;
+  const indexOfFirstArticle = indexOfLastArticle - articlesPerPage;
+  const currentArticles = articles.slice(indexOfFirstArticle, indexOfLastArticle);
+
+  const goToPage = (page) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
   };
 
   return (
     <main>
       <div className={style.grid}>
-        {articles.map((article, index) => (
+        {currentArticles.map((article, index) => (
           <div key={index} className={style.card} onClick={() => handleCardClick(article)}>
             <div className={style.imageContainer}>
               <img src={article.urlToImage || 'https://via.placeholder.com/150'} alt="news" />
@@ -61,6 +70,21 @@ export default function DailyNews({ setSummary }) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* 分頁控制按鈕 */}
+      <div className={style.pagination}>
+        <button onClick={() => goToPage(currentPage - 1)} disabled={currentPage === 1}>上一頁</button>
+        {[...Array(totalPages)].map((_, i) => (
+          <button
+            key={i}
+            className={currentPage === i + 1 ? style.activePage : ''}
+            onClick={() => goToPage(i + 1)}
+          >
+            {i + 1}
+          </button>
+        ))}
+        <button onClick={() => goToPage(currentPage + 1)} disabled={currentPage === totalPages}>下一頁</button>
       </div>
 
       {/* 模態視窗 */}
