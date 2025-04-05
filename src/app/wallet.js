@@ -31,7 +31,20 @@ export default function Wallet({
     enabled: !!address,
   });
 
+  // Initialize wallet on component mount
   useEffect(() => {
+    // Initialize wallet from localStorage
+    const savedWalletAddress = localStorage.getItem('walletAddress');
+    
+    // If there's a saved wallet address and we're not connected
+    if (savedWalletAddress && !isConnected) {
+      // Try to reconnect with the appropriate connector
+      const connector = connectors.find(c => c.ready);
+      if (connector) {
+        connect({ connector });
+      }
+    }
+    
     // Check if the user is on a mobile device
     const checkMobile = () => {
       return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -51,7 +64,7 @@ export default function Wallet({
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, []);
+  }, [connect, connectors, isConnected]);
 
   // Update wallet status in parent component
   useEffect(() => {
@@ -63,6 +76,8 @@ export default function Wallet({
       localStorage.setItem('walletAddress', address);
     } else {
       setWalletStatus("Connect Wallet");
+      // Clear the stored wallet address if disconnected
+      localStorage.removeItem('walletAddress');
     }
   }, [isConnected, address, isVerified, setWalletStatus]);
 
@@ -147,6 +162,7 @@ export default function Wallet({
 
   const handleDisconnect = () => {
     disconnect();
+    localStorage.removeItem('walletAddress'); // Clear from localStorage when disconnecting
   };
 
   // Connect to wallet
@@ -206,6 +222,22 @@ export default function Wallet({
                 {balanceError}
               </div>
             )}
+            
+            <button 
+              onClick={handleDisconnect}
+              className={style.disconnectButton}
+              style={{
+                marginTop: '15px',
+                padding: '8px 12px',
+                background: '#f44336',
+                color: 'white',
+                border: 'none',
+                borderRadius: '5px',
+                cursor: 'pointer'
+              }}
+            >
+              Disconnect Wallet
+            </button>
             
           </>
         ) : (

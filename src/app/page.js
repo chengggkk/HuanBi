@@ -14,6 +14,7 @@ import Wallet from './wallet';
 import MainNews from './News/mainNews';
 import MainTrend from './trend/trend_index';
 import MainGame from './game/game';
+import DailyNews from './News/dailyNews'
 
 // Create a walletConnect connector with your project ID
 const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID';
@@ -50,13 +51,13 @@ export default function Home() {
   const renderContent = () => {
     switch (currentPage) {
       case "news":
-        return <MainNews />;
+        return <DailyNews />;
       case "trend":
         return <MainTrend />;
       case "game":
         return <MainGame />;
       default:
-        return <MainNews />;
+        return <DailyNews />;
     }
   };
 

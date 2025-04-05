@@ -39,9 +39,6 @@ export default function Transactions({ address, summary }) {
         const transformedTransactions = Array.isArray(data.items) 
           ? data.items.map((item, index) => ({
               id: item.id || `tx-${index}`,
-              date: item.details && item.details.timestamp 
-                ? new Date(item.details.timestamp * 1000).toISOString().split('T')[0] 
-                : 'Unknown date',
               type: item.type || (item.details && item.details.type) || 'Unknown type',
               status: 'Completed', // Default status
               txHash: item.details && item.details.txHash ? item.details.txHash : 'Unknown hash',
@@ -164,7 +161,6 @@ export default function Transactions({ address, summary }) {
                       {transaction.txHash.substring(0, 10)}...
                     </a>
                   </div>
-                  <div style={{ fontSize: '12px', color: '#666' }}>Date: {transaction.date}</div>
                 </div>
               </div>
             </div>
