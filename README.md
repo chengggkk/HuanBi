@@ -28,20 +28,15 @@ Features
 	•	Powered by World ID to verify unique users.
 	•	Prevents abuse by ensuring each user can only play the mini-game once per day.
 
-🌐 Wallet Connectivity with wagmi
-	•	Uses wagmi hooks to support wallet connections via MetaMask, Coinbase Wallet, and more.
+🌐 Wallet Connectivity with walletconnect
+	•	Uses walletconnect hooks to support wallet connections via MetaMask, Coinbase Wallet, and more.
 	•	Ensures the mini-app can interact with multiple blockchains, enhancing its utility and accessibility.
 
 Powered By
 	•	1inch API
 	•	World App
 	•	World ID
-	•	wagmi
-
-Getting Started
-
-	Coming soon: Full installation and development guide.
-
+	•	walletconnect
 ⸻
 
 License
