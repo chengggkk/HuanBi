@@ -5,17 +5,17 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRightArrowLeft, faArrowRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { useAccount, useBalance, useDisconnect, useConnect } from "wagmi";
 import { MiniKit, VerifyCommandInput, VerificationLevel } from '@worldcoin/minikit-js';
-import { WalletConnectModal } from '@walletconnect/modal';
 
-const modal = new WalletConnectModal({
-  projectId: '14995ff2a544d3f7fc84005cbdfcba47', // Make sure this is a valid one from WalletConnect Cloud
-  metadata: {
-    name: "huanbi",
-    description: "My App using WalletConnect",
-    url: "https://a90c-111-235-226-130.ngrok-free.app/",
-    icons: ["https://myapp.com/icon.png"]
-  }
-});
+// Remove the direct WalletConnectModal initialization
+// const modal = new WalletConnectModal({
+//   projectId: '14995ff2a544d3f7fc84005cbdfcba47',
+//   metadata: {
+//     name: "huanbi",
+//     description: "My App using WalletConnect",
+//     url: "https://a90c-111-235-226-130.ngrok-free.app/",
+//     icons: ["https://myapp.com/icon.png"]
+//   }
+// });
 
 
 export default function Wallet({ 
