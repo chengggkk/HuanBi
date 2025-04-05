@@ -3,11 +3,19 @@ import { Heart } from 'lucide-react';
 import style from '../css/game.module.css';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faRotateRight } from '@fortawesome/free-solid-svg-icons';
+import { faRotateRight, faTrophy } from '@fortawesome/free-solid-svg-icons';
 
-
-// 卡片圖案
-const CARD_SYMBOLS = ['🐶', '🐱', '🦊', '🐼', '🐨', '🦁', '🐯', '🐭'];
+// 卡片圖案 - 使用圖片路徑而非表情符號
+const CARD_SYMBOLS = [
+  '/photo/1.png',
+  '/photo/2.png',
+  '/photo/3.png',
+  '/photo/4.png',
+  '/photo/5.png',
+  '/photo/6.png',
+  '/photo/7.png',
+  '/photo/8.png'
+];
 
 const MemoryGame = () => {
   // 遊戲狀態
@@ -104,14 +112,22 @@ const MemoryGame = () => {
     return (
       initialShow ||
       flippedIndices.includes(index) ||
-      matchedPairs.includes(symbol)
+      matchedPairs.includes(symbol) ||
+      gameWon // 確保遊戲獲勝時所有卡片都顯示正面
     );
   };
-
 
   const returnHome = () => {
     setGameStarted(false);
   }
+
+  // 添加即時通關功能
+  const instantWin = () => {
+    // 設置所有卡片對應的符號為匹配成功
+    const allPairs = [...new Set(cards.map(card => card.symbol))];
+    setMatchedPairs(allPairs);
+    setGameWon(true);
+  };
 
   return (
     <div className={style.main}>
@@ -140,12 +156,10 @@ const MemoryGame = () => {
         </div>
       )}
 
-
       {/* 生命值和重新開始按鈕 */}
       {gameStarted && (
         <div className={style.gameStart}>
           <div className={style.startUp}>
-
             <div className="flex">
               {[...Array(3)].map((_, i) => (
                 <Heart
@@ -157,16 +171,25 @@ const MemoryGame = () => {
                 />
               ))}
             </div>
-            <button
-              onClick={initializeGame}
-              className={style.restart}
-              disabled={initialShow}
-            >
-              <FontAwesomeIcon icon={faRotateRight} />
-            </button>
+            <div className="flex gap-2">
+              {/* 添加即時通關按鈕 */}
+              <button
+                onClick={instantWin}
+                className={style.instantWin}
+                disabled={gameOver || gameWon}
+                title="Instant Win"
+              >
+                <FontAwesomeIcon icon={faTrophy} />
+              </button>
+              <button
+                onClick={initializeGame}
+                className={style.restart}
+                disabled={initialShow}
+              >
+                <FontAwesomeIcon icon={faRotateRight} />
+              </button>
+            </div>
           </div>
-
-
 
           {/* 卡片網格 */}
           <div className={style.cardGrid}>
@@ -179,9 +202,13 @@ const MemoryGame = () => {
                   onClick={() => handleCardClick(index)}
                   className={`${style.card} ${isCardShowing(index, card.symbol) ? style.flipped : ""}`}
                 >
-                  {/* 卡片正面 */}
+                  {/* 卡片正面 - 使用圖片而非文字 */}
                   <div className={style.cardFront}>
-                    {card.symbol}
+                    <img 
+                      src={card.symbol} 
+                      alt="Card" 
+                      className={style.cardImage} 
+                    />
                   </div>
 
                   {/* 卡片背面 */}
@@ -189,12 +216,12 @@ const MemoryGame = () => {
                     ? style.cardBackHover
                     : ""
                     }`}>
+                      <img src="/photo/ethlogo2.png" alt="Card Back" className={style.cardImage}></img>
                   </div>
                 </div>
               </div>
             ))}
           </div>
-
 
           {/* 遊戲狀態顯示 */}
           {gameWon && (
@@ -217,18 +244,10 @@ const MemoryGame = () => {
                 Return to Home
               </button>
             </div>
-          )
-          }
+          )}
         </div>
-
       )}
-
-
-
-
-
-
-    </div >
+    </div>
   );
 };
 
