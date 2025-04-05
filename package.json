@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@1inch/cross-chain-sdk": "^0.1.13",
+    "@1inch/fusion-sdk": "^2.2.3",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-brands-svg-icons": "^6.7.2",
     "@fortawesome/free-regular-svg-icons": "^6.7.2",
@@ -18,14 +19,20 @@
     "@worldcoin/mini-apps-ui-kit-react": "^0.0.8",
     "@worldcoin/minikit-js": "^1.8.0",
     "apexcharts": "^4.5.0",
+    "axios": "^1.8.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^5.1.0",
     "lucide-react": "^0.487.0",
     "next": "15.2.4",
+    "path": "^0.12.7",
     "react": "^19.0.0",
     "react-apexcharts": "^1.7.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@types/react": "19.1.0",
     "eslint": "^9",
     "eslint-config-next": "15.2.4"
   }

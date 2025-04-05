@@ -8,7 +8,7 @@ import { faNewspaper, faChartLine, faGamepad, faWallet } from '@fortawesome/free
 import Wallet from './wallet'
 
 import MainNews from './News/mainNews'
-import MainTrend from './trend/trend'
+import MainTrend from './trend/trend_index'
 import MainGame from './game/game'
 
 
