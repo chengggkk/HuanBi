@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models import ChatOpenAI  # 使用 langchain-community
 from flask_cors import CORS
 import os
 

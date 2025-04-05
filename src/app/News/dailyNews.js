@@ -10,6 +10,10 @@ export default function DailyNews({ setSummary }) {
   const [currentPage, setCurrentPage] = useState(1);
   const articlesPerPage = 10;
 
+  const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
+
+  console.log("API_BASE_URL:", API_BASE_URL);  // 這裡確認是否正確設置
+
   const today = new Date();
   const lastWeek = new Date();
   lastWeek.setDate(today.getDate() - 7);
@@ -24,7 +28,9 @@ export default function DailyNews({ setSummary }) {
       .then(data => {
         setArticles(data.articles || []);
         const headlines = (data.articles || []).map(article => article.title);
-        fetch("http://127.0.0.1:5000/generate-summary", {
+        
+        // 確保請求的 URL 正確
+        fetch(`${API_BASE_URL}/generate-summary`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ headlines })
