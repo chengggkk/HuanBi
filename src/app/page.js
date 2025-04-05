@@ -14,22 +14,36 @@ import Wallet from './wallet';
 import MainNews from './News/mainNews';
 import MainTrend from './trend/trend_index';
 import MainGame from './game/game';
+import DailyNews from './News/dailyNews'
+import { WalletConnectModal } from '@walletconnect/modal';
+
+const modal = new WalletConnectModal({
+  projectId: '14995ff2a544d3f7fc84005cbdfcba47', // Make sure this is a valid one from WalletConnect Cloud
+  metadata: {
+    name: "huanbi",
+    description: "My App using WalletConnect",
+    url: "https://a90c-111-235-226-130.ngrok-free.app/",
+    icons: ["https://myapp.com/icon.png"]
+  }
+});
 
 // Create a walletConnect connector with your project ID
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || 'YOUR_PROJECT_ID';
+// Add a fallback project ID or handle the case when it's missing
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "DEMO_PROJECT_ID";
 
-// Create wagmi config
+// Create wagmi config with additional safety checks
 const config = createConfig({
   chains: [mainnet],
   transports: {
     [mainnet.id]: http(),
   },
   connectors: [
-    metaMask(),
-    walletConnect({ projectId }),
-    coinbaseWallet({ appName: 'Your App Name' }),
-    injected(),
-  ],
+    // Only add connectors that are available
+    ...(typeof metaMask === 'function' ? [metaMask()] : []),
+    ...(typeof walletConnect === 'function' && projectId ? [walletConnect({ projectId })] : []),
+    ...(typeof coinbaseWallet === 'function' ? [coinbaseWallet({ appName: 'Your App Name' })] : []),
+    ...(typeof injected === 'function' ? [injected()] : []),
+  ].filter(Boolean), // Filter out any undefined connectors
 });
 
 // Create the Query Client
@@ -50,13 +64,13 @@ export default function Home() {
   const renderContent = () => {
     switch (currentPage) {
       case "news":
-        return <MainNews />;
+        return <DailyNews />;
       case "trend":
         return <MainTrend />;
       case "game":
         return <MainGame />;
       default:
-        return <MainNews />;
+        return <DailyNews />;
     }
   };
 
@@ -118,6 +132,8 @@ function AppContent({
           isVerified={isVerified} 
           verificationData={verificationData}
           setWalletStatus={setWalletStatus}
+          setIsVerified={setIsVerified}
+          setVerificationData={setVerificationData}
         />
       )}
 

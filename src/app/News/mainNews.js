@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import style from '../css/dailynews.module.css';
 import DailyNews from './dailyNews';
-import NewsSummary from './newsSummary';
 
 export default function MainNews() {
     const [selectedTab, setSelectedTab] = useState('overview'); // 預設顯示 News Overview
@@ -28,12 +27,12 @@ export default function MainNews() {
                 >
                     News Overview
                 </div>
-                <div 
+                {/* <div 
                     className={`${style.newsNavContent} ${selectedTab === 'summary' ? style.choose : style.nochoose}`}
                     onClick={() => handleTabChange('summary')}
                 >
                     AI News Summary
-                </div>
+                </div> */}
             </div>
 
             {/* 內容區域，添加滑動動畫 */}
