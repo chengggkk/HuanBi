@@ -53,7 +53,7 @@ const MemoryGame = () => {
     // 初始展示所有卡片1秒
     setTimeout(() => {
       setInitialShow(false);
-    }, 1000);
+    }, 10000);
   };
 
   // 處理卡片點擊

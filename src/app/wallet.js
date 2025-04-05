@@ -60,6 +60,7 @@ export default function Wallet({
         ? "✅ Verified Human" 
         : `🦊 ${formatAddress(address)}`
       );
+      localStorage.setItem('walletAddress', address);
     } else {
       setWalletStatus("Connect Wallet");
     }
@@ -190,14 +191,6 @@ export default function Wallet({
                 <p className={style.verified}>✅ Verified Human</p>
               )}
               
-              {/* Add a disconnect button */}
-              <button 
-                onClick={handleDisconnect}
-                className={style.disconnectButton}
-                style={{ marginTop: '8px', padding: '4px 8px', fontSize: '12px' }}
-              >
-                Disconnect
-              </button>
             </div>
             
             <div className={style.money}>
@@ -214,31 +207,6 @@ export default function Wallet({
               </div>
             )}
             
-            {/* Display other non-zero token balances if available */}
-            {tokenBalances.length > 0 && (
-              <div className={style.tokenList}>
-                {tokenBalances
-                  .filter(token => !token.isUSDC) // Don't show USDC here as it's already shown in the main balance
-                  .map(token => (
-                    <div key={token.tokenAddress} className={style.tokenItem}>
-                      <span className={style.tokenAddress}>{formatAddress(token.tokenAddress)}</span>
-                      <span className={style.tokenBalance}>{token.balance}</span>
-                    </div>
-                  ))
-                }
-              </div>
-            )}
-            
-            <div className={style.actions}>
-              <div>
-                <button><FontAwesomeIcon icon={faArrowRightArrowLeft} /></button>
-                <p>Swap</p>
-              </div>
-              <div>
-                <button><FontAwesomeIcon icon={faArrowRight}/></button>
-                <p>Send</p>
-              </div>
-            </div>
           </>
         ) : (
           <div className={style.connectContainer} style={{ 

@@ -1,36 +1,51 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+HuanBi
 
-## Getting Started
+HuanBi is a blockchain-powered mini-app designed to deliver daily blockchain news, provide real-time crypto data, enable cross-chain swaps, and engage users with daily mini-games — all within the World App ecosystem.
 
-First, run the development server:
+Features
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+📰 Daily Blockchain News
+	•	Uses a web crawler to fetch the latest blockchain news daily.
+	•	Keeps users informed with up-to-date and relevant information.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+📊 Real-Time Crypto Charts
+	•	Integrates 1inch Charts API to display real-time crypto prices.
+	•	Prices are visualized as candlestick charts for easy analysis.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+🔄 Cross-Chain Swaps
+	•	Leverages 1inch’s Swap API to enable seamless cross-chain crypto swaps.
+	•	Users can perform swaps directly within the World App.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+📜 Transaction History
+	•	Utilizes 1inch History API to retrieve wallet address transaction histories.
+	•	Users can track their transaction records easily.
 
-## Learn More
+🎮 Daily Mini-Game (Earn-to-Play)
+	•	Offers a daily game where users can earn crypto rewards.
+	•	Designed to increase daily user engagement and retention.
 
-To learn more about Next.js, take a look at the following resources:
+🧠 Unique User Verification
+	•	Powered by World ID to verify unique users.
+	•	Prevents abuse by ensuring each user can only play the mini-game once per day.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+🌐 Wallet Connectivity with wagmi
+	•	Uses wagmi hooks to support wallet connections via MetaMask, Coinbase Wallet, and more.
+	•	Ensures the mini-app can interact with multiple blockchains, enhancing its utility and accessibility.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Powered By
+	•	1inch API
+	•	World App
+	•	World ID
+	•	wagmi
 
-## Deploy on Vercel
+Getting Started
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+	Coming soon: Full installation and development guide.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+⸻
+
+License
+
+MIT License
+
+⸻
