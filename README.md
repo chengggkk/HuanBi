@@ -48,7 +48,8 @@
 
 1. Integrate World ID with user wallets to enable identity-based interactions across more blockchains.  
 2. Enable full crypto swapping functionality directly within the World Mini-App interface.  
-3. [Reserved for future feature or development goal.]
+3. [Reserved for future feature or development goal.]  
+4. Complete the mini-game reward system so users can successfully claim earned rewards.
 
 ---
 
