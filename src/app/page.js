@@ -14,22 +14,15 @@ import Wallet from './wallet';
 import MainNews from './News/mainNews';
 import MainTrend from './trend/trend_index';
 import MainGame from './game/game';
-import DailyNews from './News/dailyNews'
-import { WalletConnectModal } from '@walletconnect/modal';
+import DailyNews from './News/dailyNews';
 
-const modal = new WalletConnectModal({
-  projectId: '14995ff2a544d3f7fc84005cbdfcba47', // Make sure this is a valid one from WalletConnect Cloud
-  metadata: {
-    name: "huanbi",
-    description: "My App using WalletConnect",
-    url: "https://a90c-111-235-226-130.ngrok-free.app/",
-    icons: ["https://myapp.com/icon.png"]
-  }
-});
+// Remove the direct WalletConnectModal import and initialization
+// import { WalletConnectModal } from '@walletconnect/modal';
+// const modal = new WalletConnectModal({...});
 
 // Create a walletConnect connector with your project ID
 // Add a fallback project ID or handle the case when it's missing
-const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID || "DEMO_PROJECT_ID";
+const projectId = process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 
 // Create wagmi config with additional safety checks
 const config = createConfig({
@@ -40,7 +33,17 @@ const config = createConfig({
   connectors: [
     // Only add connectors that are available
     ...(typeof metaMask === 'function' ? [metaMask()] : []),
-    ...(typeof walletConnect === 'function' && projectId ? [walletConnect({ projectId })] : []),
+    ...(typeof walletConnect === 'function' && projectId ? [walletConnect({ 
+      projectId,
+      showQrModal: true,
+      // Add metadata for walletConnect
+      metadata: {
+        name: "huanbi",
+        description: "My App using WalletConnect",
+        url: "https://a90c-111-235-226-130.ngrok-free.app/",
+        icons: ["https://your-app-domain.com/icon.png"]
+      }
+    })] : []),
     ...(typeof coinbaseWallet === 'function' ? [coinbaseWallet({ appName: 'Your App Name' })] : []),
     ...(typeof injected === 'function' ? [injected()] : []),
   ].filter(Boolean), // Filter out any undefined connectors
@@ -74,8 +77,43 @@ export default function Home() {
     }
   };
 
+  // Create a modified config that avoids client-side references in SSR
+  const [wagmiConfig, setWagmiConfig] = useState(null);
+  
+  useEffect(() => {
+    // Initialize wagmi config on the client side to avoid issues with SSR
+    const clientConfig = createConfig({
+      chains: [mainnet],
+      transports: {
+        [mainnet.id]: http(),
+      },
+      connectors: [
+        ...(typeof metaMask === 'function' ? [metaMask()] : []),
+        ...(typeof walletConnect === 'function' && projectId ? [walletConnect({ 
+          projectId,
+          showQrModal: true,
+          metadata: {
+            name: "huanbi",
+            description: "My App using WalletConnect",
+            url: "https://a90c-111-235-226-130.ngrok-free.app/",
+            icons: ["https://your-app-domain.com/icon.png"]
+          }
+        })] : []),
+        ...(typeof coinbaseWallet === 'function' ? [coinbaseWallet({ appName: 'Your App Name' })] : []),
+        ...(typeof injected === 'function' ? [injected()] : []),
+      ].filter(Boolean),
+    });
+    
+    setWagmiConfig(clientConfig);
+  }, []);
+
+  // Only render with WagmiProvider when the config is ready (client-side)
+  if (!wagmiConfig) {
+    return <div>Loading...</div>;
+  }
+
   return (
-    <WagmiProvider config={config}>
+    <WagmiProvider config={wagmiConfig}>
       <QueryClientProvider client={queryClient}>
         <AppContent 
           showWallet={showWallet}
