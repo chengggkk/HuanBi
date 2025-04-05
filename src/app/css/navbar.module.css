@@ -49,13 +49,14 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 60%; /* 可根據需求調整大小 */
+    width: 80%; /* 可根據需求調整大小 */
   }
   
   .topNavContainer .logo {
     display: flex;
     justify-content: left;
     align-items: center;
+    width: 100px;
   }
   
   
