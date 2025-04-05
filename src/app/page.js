@@ -16,6 +16,7 @@ import MainTrend from './trend/trend_index';
 import MainGame from './game/game';
 import DailyNews from './News/dailyNews';
 
+import MiniKitProvider from './minikit_provider'
 // Remove the direct WalletConnectModal import and initialization
 // import { WalletConnectModal } from '@walletconnect/modal';
 // const modal = new WalletConnectModal({...});
@@ -142,6 +143,7 @@ function AppContent({
   const [walletStatus, setWalletStatus] = useState("Connect Wallet");
 
   return (
+    <MiniKitProvider>
     <main>
       <div className={style.topNav}>
         <div className={style.topNavContainer}>
@@ -175,6 +177,7 @@ function AppContent({
         />
       )}
 
+
       <div className={style.main}>
         {renderContent()}
       </div>
@@ -205,5 +208,6 @@ function AppContent({
         </div>
       </div>
     </main>
+    </MiniKitProvider>
   );
 }

@@ -4,19 +4,7 @@ import style from "./css/wallet.module.css";
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faArrowRightArrowLeft, faArrowRight, faSpinner } from '@fortawesome/free-solid-svg-icons';
 import { useAccount, useBalance, useDisconnect, useConnect } from "wagmi";
-import { MiniKit, VerifyCommandInput, VerificationLevel } from '@worldcoin/minikit-js';
-
-// Remove the direct WalletConnectModal initialization
-// const modal = new WalletConnectModal({
-//   projectId: '14995ff2a544d3f7fc84005cbdfcba47',
-//   metadata: {
-//     name: "huanbi",
-//     description: "My App using WalletConnect",
-//     url: "https://a90c-111-235-226-130.ngrok-free.app/",
-//     icons: ["https://myapp.com/icon.png"]
-//   }
-// });
-
+import { MiniKit, VerifyCommandInput, VerificationLevel, ResponseEvent } from '@worldcoin/minikit-js';
 
 export default function Wallet({ 
   closeWallet, 
@@ -50,7 +38,7 @@ export default function Wallet({
   // Initialize and check if the World ID MiniKit is available
   const [isMiniKitAvailable, setIsMiniKitAvailable] = useState(false);
 
-  // Verify with World ID - safer version with proper error handling
+  // Verify with World ID - updated implementation based on documentation
   const handleVerify = async () => {
     if (!isMiniKitAvailable) {
       console.log("World ID MiniKit is not available");
@@ -60,44 +48,18 @@ export default function Wallet({
     try {
       setIsVerifying(true);
 
-      // Check again if MiniKit and its verify command are available
-      if (typeof MiniKit === 'undefined' || typeof MiniKit.commandsAsync?.verify !== 'function') {
-        throw new Error("MiniKit or verify function is not available");
-      }
-
-      // Prepare verification payload
+      // Create verification payload based on the documentation
       const verifyPayload = {
         action: 'verify', // Replace with your action ID from Developer Portal
         verification_level: VerificationLevel.Orb, // Or VerificationLevel.Device
       };
 
-      // Request verification
-      const response = await MiniKit.commandsAsync.verify(verifyPayload);
+      // Send the verify command
+      MiniKit.commands.verify(verifyPayload);
       
-      if (response.finalPayload.status === 'success') {
-        // Store verification data
-        const verificationResult = {
-          nullifierHash: response.finalPayload.nullifier_hash,
-          merkleRoot: response.finalPayload.merkle_root,
-          proof: response.finalPayload.proof,
-          verificationLevel: response.finalPayload.verification_level,
-        };
-        
-        // Send to backend for verification
-        await verifyProofOnBackend(verificationResult, verifyPayload.action, verifyPayload.signal);
-        
-        // Update verification status
-        setIsVerified(true);
-        setVerificationData(verificationResult);
-        
-        // Update wallet status
-        setWalletStatus("✅ Verified Human");
-      } else {
-        console.error("Verification failed:", response.finalPayload);
-      }
+      // Subscription is handled in the useEffect
     } catch (error) {
-      console.error("Error during verification:", error);
-    } finally {
+      console.error("Error initiating verification:", error);
       setIsVerifying(false);
     }
   };
@@ -133,19 +95,16 @@ export default function Wallet({
   };
 
   useEffect(() => {
-    // Check if World ID MiniKit is available - safer version
+    // Check if World ID MiniKit is available
     const checkMiniKit = () => {
       try {
-        // First check if MiniKit is defined
         if (typeof MiniKit === 'undefined') {
           console.log("MiniKit is not defined");
           return false;
         }
         
-        // Then check if isInstalled method exists and call it
         if (typeof MiniKit.isInstalled === 'function') {
-          const isAvailable = MiniKit.isInstalled();
-          return isAvailable;
+          return MiniKit.isInstalled();
         } else {
           console.log("MiniKit.isInstalled is not a function");
           return false;
@@ -158,6 +117,44 @@ export default function Wallet({
     
     const isMiniKitAvailableResult = checkMiniKit();
     setIsMiniKitAvailable(isMiniKitAvailableResult);
+
+    // Subscribe to MiniAppVerifyAction response event
+    if (isMiniKitAvailableResult) {
+      MiniKit.subscribe(ResponseEvent.MiniAppVerifyAction, async (response) => {
+        if (response.status === 'error') {
+          console.error('Verification error:', response);
+          setIsVerifying(false);
+          return;
+        }
+
+        // On successful verification
+        if (response.status === 'success') {
+          // Create verification result object
+          const verificationResult = {
+            nullifierHash: response.nullifier_hash,
+            merkleRoot: response.merkle_root,
+            proof: response.proof,
+            verificationLevel: response.verification_level,
+          };
+          
+          // Verify the proof on backend
+          const isVerified = await verifyProofOnBackend(
+            response, 
+            'voting-action', // Must match the action ID used in the verify command
+            address // Signal used in the verify command
+          );
+          
+          if (isVerified) {
+            // Update verification status
+            setIsVerified(true);
+            setVerificationData(verificationResult);
+            setWalletStatus("✅ Verified Human");
+          }
+          
+          setIsVerifying(false);
+        }
+      });
+    }
 
     // Check if the user is on a mobile device
     const checkMobile = () => {
@@ -174,11 +171,14 @@ export default function Wallet({
     // Add event listener to close wallet when clicking outside
     document.addEventListener('mousedown', handleClickOutside);
     
-    // Cleanup the event listener on component unmount
+    // Cleanup the event listener and subscription on component unmount
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
+      if (isMiniKitAvailableResult) {
+        MiniKit.unsubscribe(ResponseEvent.MiniAppVerifyAction);
+      }
     };
-  }, []);
+  }, [address]);
 
   // Initialize wallet from localStorage
   useEffect(() => {
